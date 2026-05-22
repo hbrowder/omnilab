@@ -28,6 +28,9 @@ redis==7.4.0
 # System metrics (health API)
 psutil==7.2.2
 
+# Console / pty bridge (api/console.py)
+ptyprocess==0.7.0
+
 # VNC proxy (console module)
 websockify==0.13.0
 websockets==16.0
