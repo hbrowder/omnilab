@@ -45,6 +45,15 @@ jobs:
       - name: Run tests
         run: pytest -q
 
+      - name: Build API docs (no drift check)
+        run: |
+          python scripts/build_api_docs.py
+          # Fail if the committed docs are stale relative to the current OpenAPI spec.
+          git diff --exit-code site/docs/api/ || (
+            echo "::error::API docs are out of date — run 'python scripts/build_api_docs.py' and commit the result."
+            exit 1
+          )
+
   frontend:
     name: Frontend (Node 20)
     runs-on: ubuntu-22.04
