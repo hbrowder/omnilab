@@ -1423,6 +1423,60 @@
         }
       }
     },
+    "/api/system/first-run": {
+      "get": {
+        "summary": "First Run Status",
+        "description": "Whether the install has completed initial setup.",
+        "operationId": "first_run_status_api_system_first_run_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/system/first-run/complete": {
+      "post": {
+        "summary": "First Run Complete",
+        "description": "Persist the wizard's choices.\n\nIdempotency rule: once `complete` is True we refuse \u2014 see module docstring.",
+        "operationId": "first_run_complete_api_system_first_run_complete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FirstRunComplete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/console/{node_id}/info": {
       "get": {
         "summary": "Console Info",
@@ -1525,6 +1579,36 @@
           "plan"
         ],
         "title": "CheckoutSessionRequest"
+      },
+      "FirstRunComplete": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Password"
+          },
+          "telemetry": {
+            "type": "boolean",
+            "title": "Telemetry",
+            "default": false
+          },
+          "license_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "FirstRunComplete"
       },
       "HTTPValidationError": {
         "properties": {

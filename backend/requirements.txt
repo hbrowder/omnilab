@@ -16,9 +16,10 @@ requests==2.34.2
 # Forms / uploads
 python-multipart==0.0.28
 
-# Crypto (license HMAC, signing)
+# Crypto (license HMAC, signing, admin password hashing)
 cryptography==48.0.0
 jwcrypto==1.5.7
+bcrypt==5.0.0
 
 # Integrations
 docker==7.1.0
