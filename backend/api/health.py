@@ -1,12 +1,11 @@
 """
 System health and metrics API.
 """
-from fastapi import APIRouter
-from datetime import datetime
-import time
 import os
 import platform
-import sys
+import time
+
+from fastapi import APIRouter
 
 router = APIRouter()
 
@@ -37,11 +36,11 @@ async def get_system_metrics():
     """Combined system + backend process + API health metrics."""
     if not HAS_PSUTIL:
         return {"error": "psutil not installed", "api_healthy": True, "version": "1.0.0"}
-    
+
     p = psutil.Process(os.getpid())
     mem = psutil.virtual_memory()
     disk = psutil.disk_usage("/")
-    
+
     return {
         "cpu": psutil.cpu_percent(interval=None),
         "cpu_cores": psutil.cpu_count(),
@@ -79,14 +78,14 @@ async def get_docker_info():
             "pulling": [],
             "error": "Docker not reachable",
         }
-    
+
     try:
         containers = docker_client.containers.list(all=True)
         running = [c for c in containers if c.status == "running"]
         images = docker_client.images.list()
         df = docker_client.df()
         storage = sum(img.get("Size", 0) for img in df.get("Images", []))
-        
+
         return {
             "containers_running": len(running),
             "containers_total": len(containers),
@@ -111,15 +110,15 @@ async def get_network_info():
     bridges = []
     interfaces_up = 0
     interfaces_down = 0
-    
+
     if HAS_PSUTIL:
         stats = psutil.net_if_stats()
-        for name, s in stats.items():
+        for _name, s in stats.items():
             if s.isup:
                 interfaces_up += 1
             else:
                 interfaces_down += 1
-    
+
     # Try to query OVS via subprocess
     try:
         import subprocess
@@ -138,7 +137,7 @@ async def get_network_info():
                     bridges.append({"name": br_name, "port_count": port_count})
     except Exception:
         pass  # OVS may not be installed
-    
+
     return {
         "bridges": bridges,
         "interfaces_up": interfaces_up,
@@ -151,7 +150,7 @@ async def get_network_info():
 async def get_lab_stats():
     """Lab and node statistics from the database."""
     from core.database import get_db
-    
+
     stats = {
         "total_labs": 0,
         "active_labs": 0,
@@ -160,13 +159,13 @@ async def get_lab_stats():
         "stopped_nodes": 0,
         "by_category": {},
     }
-    
+
     async for db in get_db():
         # Lab counts
         async with db.execute("SELECT COUNT(*) FROM labs") as cur:
             row = await cur.fetchone()
             stats["total_labs"] = row[0] if row else 0
-        
+
         # Active labs (any running nodes)
         async with db.execute(
             "SELECT COUNT(DISTINCT lab_id) FROM nodes WHERE status = ?",
@@ -174,7 +173,7 @@ async def get_lab_stats():
         ) as cur:
             row = await cur.fetchone()
             stats["active_labs"] = row[0] if row else 0
-        
+
         # Node counts
         async with db.execute("SELECT status, COUNT(*) FROM nodes GROUP BY status") as cur:
             async for row in cur:
@@ -183,13 +182,13 @@ async def get_lab_stats():
                 elif row[0] == "stopped":
                     stats["stopped_nodes"] = row[1]
                 stats["total_nodes"] += row[1]
-        
+
         # By category
         async with db.execute("SELECT category, COUNT(*) FROM labs GROUP BY category") as cur:
             async for row in cur:
                 if row[0]:
                     stats["by_category"][row[0]] = row[1]
-    
+
     return stats
 
 
@@ -199,7 +198,7 @@ def _get_recent_logs():
     if not os.path.exists(log_path):
         return []
     try:
-        with open(log_path, "r") as f:
+        with open(log_path) as f:
             lines = f.readlines()[-20:]
         logs = []
         for line in lines:

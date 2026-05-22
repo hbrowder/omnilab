@@ -1,22 +1,24 @@
-import pathlib
+import json
 import os
+import pathlib
 import signal
-import json, uuid
+import uuid
+
+from core.database import get_db
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-from core.database import get_db
+
 router = APIRouter()
 
 class NodeCreate(BaseModel):
     lab_id: str
     name: str
     type: str
-    image: Optional[str] = None
-    x: Optional[float] = 100
-    y: Optional[float] = 100
-    config: Optional[dict] = {}
-    console_type: Optional[str] = 'pty'
+    image: str | None = None
+    x: float | None = 100
+    y: float | None = 100
+    config: dict | None = {}
+    console_type: str | None = 'pty'
 
 @router.post("/", status_code=201)
 async def add_node(data: NodeCreate):
@@ -33,7 +35,8 @@ async def get_node(node_id: str):
     async for db in get_db():
         async with db.execute("SELECT * FROM nodes WHERE id = ?", (node_id,)) as cur:
             row = await cur.fetchone()
-            if not row: raise HTTPException(status_code=404, detail="Node not found")
+            if not row:
+                raise HTTPException(status_code=404, detail="Node not found")
             return dict(row)
 
 @router.delete("/{node_id}", status_code=204)
@@ -42,7 +45,6 @@ async def delete_node(node_id: str):
         await db.execute("DELETE FROM nodes WHERE id = ?", (node_id,))
         await db.commit()
 
-import asyncio as _asyncio
 import subprocess as _subprocess
 
 # Track running QEMU processes: node_id -> process
@@ -111,7 +113,7 @@ async def start_node(node_id: str):
                 )
                 _qemu_procs[node_id] = proc
             except Exception as e:
-                raise HTTPException(status_code=500, detail=f"QEMU launch failed: {e}")
+                raise HTTPException(status_code=500, detail=f"QEMU launch failed: {e}") from e
 
             # Store vnc_port and update status
             await db.execute(
@@ -168,10 +170,10 @@ async def stop_node(node_id: str):
 
 
 class NodeUpdate(BaseModel):
-    name: Optional[str] = None
-    config: Optional[str] = None
-    x: Optional[int] = None
-    y: Optional[int] = None
+    name: str | None = None
+    config: str | None = None
+    x: int | None = None
+    y: int | None = None
 
 
 @router.patch("/{node_id}")
@@ -182,7 +184,7 @@ async def update_node(node_id: str, payload: NodeUpdate):
             row = await cur.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Node not found")
-        
+
         updates = []
         params = []
         if payload.name is not None:
@@ -197,10 +199,10 @@ async def update_node(node_id: str, payload: NodeUpdate):
         if payload.y is not None:
             updates.append("y = ?")
             params.append(payload.y)
-        
+
         if not updates:
             return {"status": "no changes"}
-        
+
         params.append(node_id)
         await db.execute(
             f"UPDATE nodes SET {', '.join(updates)} WHERE id = ?",

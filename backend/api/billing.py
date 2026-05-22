@@ -26,11 +26,8 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime
-from pathlib import Path
-from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 # Stripe SDK - imported lazily so the module loads even if not installed yet
@@ -41,15 +38,16 @@ except ImportError:
     stripe = None  # type: ignore
     STRIPE_AVAILABLE = False
 
-# License system from CRE-4 (already deployed). We call its key generator
-# directly when a checkout succeeds.
+# License system from CRE-4 (already deployed). We call the underlying
+# `generate_key` sync helper directly — NOT the `generate_license_key`
+# FastAPI endpoint function (that one is async and would return a coroutine).
 try:
-    from api.license import generate_license_key  # type: ignore
+    from api.license import generate_key as _license_generate_key  # type: ignore
     LICENSE_AVAILABLE = True
 except ImportError:
     # Fall back to a no-op stub so this module still loads if the license
     # module hasn't been deployed yet for some reason.
-    generate_license_key = None  # type: ignore
+    _license_generate_key = None  # type: ignore
     LICENSE_AVAILABLE = False
 
 logger = logging.getLogger("omnilab.billing")
@@ -81,48 +79,36 @@ if STRIPE_AVAILABLE and STRIPE_SECRET_KEY:
 
 
 # ---------------------------------------------------------------------------
-# Email stubs (CRE-13 will replace these)
+# Email senders (CRE-13 / Module 8)
 # ---------------------------------------------------------------------------
-EMAIL_LOG = Path.home() / "netlab" / "backend" / "billing_emails.log"
-
-
-def _log_email(template: str, recipient: str, context: dict) -> None:
-    """TODO(CRE-13): Replace this with the Postmark sender from Module 8.
-
-    Today: append a JSON line to billing_emails.log so we can confirm the
-    webhook fired and the right template would have been sent. CRE-13's
-    sender wiring should swap these two stub functions for real send calls.
-    """
-    entry = {
-        "ts": datetime.utcnow().isoformat() + "Z",
-        "template": template,
-        "to": recipient,
-        "context": context,
-    }
-    try:
-        with EMAIL_LOG.open("a") as f:
-            f.write(json.dumps(entry) + "\n")
-    except Exception as exc:  # pragma: no cover - logging-only
-        logger.warning("Failed to write email log: %s", exc)
-    logger.info("[email-stub] would send %s to %s", template, recipient)
+# Replace the old log-only stubs with the real sender module. The new module
+# still degrades to log-mode when POSTMARK_TOKEN is unset, so dev behavior is
+# unchanged — but a real Postmark token flips it to live sending with no code
+# change here.
+try:
+    from api.email import (
+        send_license_delivery as _send_license_delivery,
+    )
+    from api.email import (
+        send_payment_failed as _send_payment_failed,
+    )
+    EMAIL_AVAILABLE = True
+except ImportError:  # pragma: no cover — the module is in-tree
+    _send_license_delivery = None
+    _send_payment_failed = None
+    EMAIL_AVAILABLE = False
 
 
 def send_license_email(recipient: str, license_key: str, plan: str) -> None:
-    """TODO(CRE-13): wire to emails/01_license_delivery.html via Postmark."""
-    _log_email(
-        "01_license_delivery",
-        recipient,
-        {"license_key": license_key, "plan": plan},
-    )
+    """Replaced by CRE-13 — delegates to api.email."""
+    if EMAIL_AVAILABLE and _send_license_delivery:
+        _send_license_delivery(recipient, license_key, plan)
 
 
 def send_payment_failed_email(recipient: str, customer_id: str) -> None:
-    """TODO(CRE-13): wire to emails/04_payment_failed.html via Postmark."""
-    _log_email(
-        "04_payment_failed",
-        recipient,
-        {"customer_id": customer_id, "grace_period_days": 7},
-    )
+    """Replaced by CRE-13 — delegates to api.email."""
+    if EMAIL_AVAILABLE and _send_payment_failed:
+        _send_payment_failed(recipient, customer_id)
 
 
 # ---------------------------------------------------------------------------
@@ -153,8 +139,8 @@ def billing_health():
 # ---------------------------------------------------------------------------
 class CheckoutSessionRequest(BaseModel):
     plan: str  # "monthly" or "yearly"
-    customer_email: Optional[str] = None
-    promo_code: Optional[str] = None  # LAUNCH50, BETA20 (set in Stripe Dashboard)
+    customer_email: str | None = None
+    promo_code: str | None = None  # LAUNCH50, BETA20 (set in Stripe Dashboard)
 
 
 @router.post("/create-checkout-session")
@@ -202,7 +188,7 @@ def create_checkout_session(req: CheckoutSessionRequest):
         )
     except stripe.error.StripeError as exc:  # type: ignore[attr-defined]
         logger.error("Stripe checkout session creation failed: %s", exc)
-        raise HTTPException(status_code=502, detail=str(exc))
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return {"url": session.url, "session_id": session.id}
 
@@ -234,7 +220,7 @@ async def stripe_webhook(request: Request):
             )
     except (stripe.error.SignatureVerificationError, ValueError) as exc:  # type: ignore[attr-defined]
         logger.error("Webhook signature verification failed: %s", exc)
-        raise HTTPException(status_code=400, detail="Invalid signature")
+        raise HTTPException(status_code=400, detail="Invalid signature") from exc
 
     event_type = event.get("type") if isinstance(event, dict) else event["type"]
     data_obj = (
@@ -251,9 +237,9 @@ async def stripe_webhook(request: Request):
         plan = data_obj.get("metadata", {}).get("plan", "yearly")
 
         # Generate a license key via CRE-4 module.
-        if LICENSE_AVAILABLE and generate_license_key:
+        if LICENSE_AVAILABLE and _license_generate_key:
             try:
-                license_key = generate_license_key(
+                license_key = _license_generate_key(
                     plan="pro", customer=customer_email
                 )
             except Exception as exc:  # pragma: no cover - defensive

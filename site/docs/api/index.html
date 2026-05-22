@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0d12">
+<meta name="color-scheme" content="dark">
+<title>OmniLab REST API — Reference</title>
+<meta name="description" content="OmniLab REST API reference. 48 endpoints covering labs, nodes, networks, license, billing, health, and more.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="canonical" href="https://omnilab.io/docs/api/">
+<style>
+  :root {
+    --bg: #0b0d12; --bg-alt: #11141c; --bg-elev: #161a24;
+    --border: #232735; --text: #e6e8ee; --text-muted: #9aa3b6;
+    --accent: #7c5cff; --accent-2: #2cd4d9;
+    --good: #10b981; --warn: #f59e0b; --bad: #ef4444;
+    --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  code, pre { font-family: var(--mono); }
+  h1, h2, h3, h4 { margin: 0 0 .5em; line-height: 1.25; }
+
+  /* ============ layout ============ */
+  .shell { display: grid; grid-template-columns: 320px 1fr; min-height: 100vh; }
+  @media (max-width: 880px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { position: static !important; height: auto !important; border-right: none !important; border-bottom: 1px solid var(--border); }
+  }
+
+  /* ============ sidebar ============ */
+  .sidebar {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    background: var(--bg-alt); border-right: 1px solid var(--border);
+    padding: 20px;
+  }
+  .sb-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 1.05rem; margin-bottom: 8px;
+  }
+  .sb-brand .mark {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: linear-gradient(135deg, #7c5cff, #2cd4d9);
+  }
+  .sb-version { color: var(--text-muted); font-size: .8rem; margin-bottom: 18px; }
+  .sb-search {
+    width: 100%; padding: 9px 12px; border-radius: 9px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    color: var(--text); font: inherit;
+    margin-bottom: 16px;
+  }
+  .sb-search::placeholder { color: var(--text-muted); }
+  .sb-search:focus { outline: 2px solid var(--accent-2); outline-offset: 1px; }
+  .nav-group { margin-bottom: 22px; }
+  .nav-group h3 {
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-muted); margin-bottom: 8px;
+  }
+  .nav-op {
+    display: flex; align-items: center; gap: 10px;
+    padding: 5px 8px; margin: 0 -8px;
+    border-radius: 7px; color: var(--text-muted);
+    font-size: .88rem; line-height: 1.3;
+    border: 1px solid transparent;
+  }
+  .nav-op:hover { color: var(--text); background: var(--bg-elev); }
+  .nav-op.active { color: var(--text); background: var(--bg-elev); border-color: var(--border); }
+  .nav-path {
+    font-family: var(--mono); font-size: .82rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* ============ method badge ============ */
+  .badge {
+    display: inline-block; flex-shrink: 0;
+    color: #0b0d12; font-weight: 800;
+    font-size: .65rem; letter-spacing: .04em;
+    padding: 2px 6px; border-radius: 5px; min-width: 38px;
+    text-align: center; font-family: var(--mono);
+  }
+
+  /* ============ main content ============ */
+  main { padding: 32px 40px; max-width: 920px; }
+  @media (max-width: 880px) { main { padding: 24px; } }
+
+  .preamble {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 14px; padding: 22px 24px; margin-bottom: 32px;
+  }
+  .preamble h1 { font-size: 1.7rem; margin-bottom: 6px; }
+  .preamble p { color: var(--text-muted); margin: 6px 0; }
+  .preamble code { background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; font-size: .9em; }
+
+  .tag-group { margin-bottom: 56px; }
+  .tag-group > h1 {
+    font-size: 1.5rem; padding-bottom: 12px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--border); text-transform: capitalize;
+  }
+
+  .endpoint {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px 24px; margin-bottom: 18px;
+    scroll-margin-top: 24px;
+  }
+  .endpoint header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .endpoint h2 { font-size: 1.1rem; margin: 0 0 4px; }
+  .endpoint .path {
+    color: var(--text); background: var(--bg-alt);
+    padding: 4px 10px; border-radius: 6px; font-size: .92rem;
+    word-break: break-all;
+  }
+  .endpoint .desc { color: var(--text-muted); margin: 6px 0 16px; }
+  .endpoint h4 {
+    font-size: .78rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-muted); margin-top: 22px; margin-bottom: 8px;
+  }
+
+  /* ============ tables ============ */
+  table.params {
+    width: 100%; border-collapse: collapse;
+    background: var(--bg-alt); border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border); margin-top: 4px;
+  }
+  table.params th, table.params td {
+    padding: 9px 12px; text-align: left; vertical-align: top;
+    border-bottom: 1px solid var(--border); font-size: .9rem;
+  }
+  table.params th {
+    background: var(--bg); color: var(--text);
+    font-weight: 600; font-size: .82rem;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  table.params tr:last-child td { border-bottom: none; }
+  table.params code { color: var(--accent-2); }
+  .req { color: var(--bad); font-size: .7rem; text-transform: uppercase; margin-left: 4px; }
+  .hint { color: var(--text-muted); font-size: .82rem; }
+  .status-code { font-family: var(--mono); font-weight: 700; }
+
+  /* ============ code blocks ============ */
+  pre.example {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 16px;
+    font-size: .86rem; line-height: 1.55;
+    overflow-x: auto; margin: 4px 0 0;
+  }
+
+  /* ============ focus ============ */
+  :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="sb-brand" href="/">
+      <span class="mark" aria-hidden="true"></span> OmniLab API
+    </a>
+    <div class="sb-version">v1.0.0</div>
+    <input class="sb-search" type="search" placeholder="Search endpoints…" autocomplete="off" id="q" aria-label="Search endpoints">
+    <nav><div class="nav-group" data-tag="license"><h3>license</h3><a class="nav-op" href="#post-api-license-activate" data-q="post /api/license/activate"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/license/activate</span></a><a class="nav-op" href="#post-api-license-deactivate" data-q="post /api/license/deactivate"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/license/deactivate</span></a><a class="nav-op" href="#post-api-license-generate" data-q="post /api/license/generate"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/license/generate</span></a><a class="nav-op" href="#get-api-license-status" data-q="get /api/license/status"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/license/status</span></a></div><div class="nav-group" data-tag="billing"><h3>billing</h3><a class="nav-op" href="#post-api-billing-create-checkout-session" data-q="post /api/billing/create-checkout-session"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/billing/create-checkout-session</span></a><a class="nav-op" href="#get-api-billing-health" data-q="get /api/billing/health"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/billing/health</span></a><a class="nav-op" href="#post-api-billing-webhook" data-q="post /api/billing/webhook"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/billing/webhook</span></a></div><div class="nav-group" data-tag="labs"><h3>labs</h3><a class="nav-op" href="#get-api-labs" data-q="get /api/labs/"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/</span></a><a class="nav-op" href="#post-api-labs" data-q="post /api/labs/"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/labs/</span></a><a class="nav-op" href="#post-api-labs-import" data-q="post /api/labs/import"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/labs/import</span></a><a class="nav-op" href="#get-api-labs-lab_id" data-q="get /api/labs/{lab_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}</span></a><a class="nav-op" href="#delete-api-labs-lab_id" data-q="delete /api/labs/{lab_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/labs/{lab_id}</span></a><a class="nav-op" href="#get-api-labs-lab_id-export" data-q="get /api/labs/{lab_id}/export"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}/export</span></a><a class="nav-op" href="#get-api-labs-lab_id-topology" data-q="get /api/labs/{lab_id}/topology"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}/topology</span></a></div><div class="nav-group" data-tag="nodes"><h3>nodes</h3><a class="nav-op" href="#post-api-nodes" data-q="post /api/nodes/"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/</span></a><a class="nav-op" href="#get-api-nodes-node_id" data-q="get /api/nodes/{node_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/nodes/{node_id}</span></a><a class="nav-op" href="#patch-api-nodes-node_id" data-q="patch /api/nodes/{node_id}"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/api/nodes/{node_id}</span></a><a class="nav-op" href="#delete-api-nodes-node_id" data-q="delete /api/nodes/{node_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/nodes/{node_id}</span></a><a class="nav-op" href="#post-api-nodes-node_id-rdp-config" data-q="post /api/nodes/{node_id}/rdp-config"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/{node_id}/rdp-config</span></a><a class="nav-op" href="#post-api-nodes-node_id-start" data-q="post /api/nodes/{node_id}/start"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/{node_id}/start</span></a><a class="nav-op" href="#post-api-nodes-node_id-stop" data-q="post /api/nodes/{node_id}/stop"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/{node_id}/stop</span></a></div><div class="nav-group" data-tag="networks"><h3>networks</h3><a class="nav-op" href="#get-api-networks" data-q="get /api/networks/"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/networks/</span></a><a class="nav-op" href="#post-api-networks-links" data-q="post /api/networks/links"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/networks/links</span></a><a class="nav-op" href="#get-api-networks-links-lab_id" data-q="get /api/networks/links/{lab_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/networks/links/{lab_id}</span></a><a class="nav-op" href="#delete-api-networks-links-link_id" data-q="delete /api/networks/links/{link_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/networks/links/{link_id}</span></a><a class="nav-op" href="#patch-api-networks-links-link_id-quality" data-q="patch /api/networks/links/{link_id}/quality"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/api/networks/links/{link_id}/quality</span></a></div><div class="nav-group" data-tag="templates"><h3>templates</h3><a class="nav-op" href="#get-api-templates" data-q="get /api/templates/"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/templates/</span></a><a class="nav-op" href="#get-api-templates-categories" data-q="get /api/templates/categories"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/templates/categories</span></a><a class="nav-op" href="#get-api-templates-template_id" data-q="get /api/templates/{template_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/templates/{template_id}</span></a><a class="nav-op" href="#post-api-templates-template_id-deploy" data-q="post /api/templates/{template_id}/deploy"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/templates/{template_id}/deploy</span></a></div><div class="nav-group" data-tag="system"><h3>system</h3><a class="nav-op" href="#get-api-system-email-health" data-q="get /api/system/email-health"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/email-health</span></a><a class="nav-op" href="#get-api-system-first-run" data-q="get /api/system/first-run"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/first-run</span></a><a class="nav-op" href="#post-api-system-first-run-complete" data-q="post /api/system/first-run/complete"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/system/first-run/complete</span></a><a class="nav-op" href="#get-api-system-health" data-q="get /api/system/health"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/health</span></a><a class="nav-op" href="#get-api-system-info" data-q="get /api/system/info"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/info</span></a></div><div class="nav-group" data-tag="health"><h3>health</h3><a class="nav-op" href="#get-api-health-docker" data-q="get /api/health/docker"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/docker</span></a><a class="nav-op" href="#get-api-health-lab-stats" data-q="get /api/health/lab-stats"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/lab-stats</span></a><a class="nav-op" href="#get-api-health-metrics" data-q="get /api/health/metrics"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/metrics</span></a><a class="nav-op" href="#get-api-health-network" data-q="get /api/health/network"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/network</span></a></div><div class="nav-group" data-tag="backup"><h3>backup</h3><a class="nav-op" href="#post-api-backup-export" data-q="post /api/backup/export"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/backup/export</span></a><a class="nav-op" href="#post-api-backup-import" data-q="post /api/backup/import"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/backup/import</span></a><a class="nav-op" href="#post-api-backup-preview" data-q="post /api/backup/preview"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/backup/preview</span></a></div><div class="nav-group" data-tag="updates"><h3>updates</h3><a class="nav-op" href="#get-api-updates-check" data-q="get /api/updates/check"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/updates/check</span></a><a class="nav-op" href="#post-api-updates-dismiss" data-q="post /api/updates/dismiss"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/updates/dismiss</span></a><a class="nav-op" href="#get-api-updates-settings" data-q="get /api/updates/settings"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/updates/settings</span></a><a class="nav-op" href="#post-api-updates-settings" data-q="post /api/updates/settings"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/updates/settings</span></a><a class="nav-op" href="#post-api-updates-snooze" data-q="post /api/updates/snooze"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/updates/snooze</span></a></div><div class="nav-group" data-tag="console"><h3>console</h3><a class="nav-op" href="#get-api-console-node_id-info" data-q="get /api/console/{node_id}/info"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/console/{node_id}/info</span></a></div></nav>
+  </aside>
+  <main>
+    <div class="preamble">
+      <h1>OmniLab REST API</h1>
+      <p>
+        Base URL: <code>http://your-server:5000</code> &nbsp;·&nbsp;
+        Content-Type: <code>application/json</code> &nbsp;·&nbsp;
+        Spec: <a href="openapi.json">openapi.json</a>
+      </p>
+      <p>
+        48 public endpoints across 11 resource groups. Generated from the live FastAPI schema — this page never drifts from the running server.
+      </p>
+      <p>
+        Local interactive docs (with Try-it-now): visit <code>/docs</code> (Swagger UI) or <code>/redoc</code> on your running OmniLab instance.
+      </p>
+    </div>
+    <section class="tag-group"><h1 id="tag-license">license</h1>
+<article class="endpoint" id="post-api-license-activate">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/license/activate</code>
+  </header>
+  <h2>Activate License</h2>
+  <p class="desc">Activate a license key.</p>
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;key&quot;: &quot;string&quot;
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-license-deactivate">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/license/deactivate</code>
+  </header>
+  <h2>Deactivate License</h2>
+  <p class="desc">Remove the activated license (revert to free tier).</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-license-generate">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/license/generate</code>
+  </header>
+  <h2>Generate License Key</h2>
+  <p class="desc">Generate a new license key.
+In production, this endpoint should be removed or require admin auth.
+For now, useful for testing.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>plan</code></td><td>query</td><td>string</td><td> <span class="hint">default: <code>&quot;pro&quot;</code></span></td></tr><tr><td><code>customer</code></td><td>query</td><td>string</td><td> <span class="hint">default: <code>&quot;user&quot;</code></span></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-license-status">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/license/status</code>
+  </header>
+  <h2>Get License Status</h2>
+  <p class="desc">Get current license info.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-billing">billing</h1>
+<article class="endpoint" id="post-api-billing-create-checkout-session">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/billing/create-checkout-session</code>
+  </header>
+  <h2>Create Checkout Session</h2>
+  
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;plan&quot;: &quot;string&quot;,
+  &quot;customer_email&quot;: null,
+  &quot;promo_code&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-billing-health">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/billing/health</code>
+  </header>
+  <h2>Billing Health</h2>
+  
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-billing-webhook">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/billing/webhook</code>
+  </header>
+  <h2>Stripe Webhook</h2>
+  
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-labs">labs</h1>
+<article class="endpoint" id="get-api-labs">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/labs/</code>
+  </header>
+  <h2>List Labs</h2>
+  
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-labs">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/labs/</code>
+  </header>
+  <h2>Create Lab</h2>
+  
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;name&quot;: &quot;string&quot;,
+  &quot;description&quot;: null,
+  &quot;category&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">201</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-labs-import">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/labs/import</code>
+  </header>
+  <h2>Import Lab</h2>
+  
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;schema_version&quot;: 0,
+  &quot;product&quot;: null,
+  &quot;lab&quot;: {},
+  &quot;nodes&quot;: [
+    null
+  ],
+  &quot;links&quot;: [
+    null
+  ]
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">201</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-labs-lab_id">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/labs/{lab_id}</code>
+  </header>
+  <h2>Get Lab</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="delete-api-labs-lab_id">
+  <header>
+    <span class="badge" style="background:#ef4444">DEL</span>
+    <code class="path">/api/labs/{lab_id}</code>
+  </header>
+  <h2>Delete Lab</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">204</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-labs-lab_id-export">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/labs/{lab_id}/export</code>
+  </header>
+  <h2>Export Lab</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-labs-lab_id-topology">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/labs/{lab_id}/topology</code>
+  </header>
+  <h2>Get Topology</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-nodes">nodes</h1>
+<article class="endpoint" id="post-api-nodes">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/nodes/</code>
+  </header>
+  <h2>Add Node</h2>
+  
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;lab_id&quot;: &quot;string&quot;,
+  &quot;name&quot;: &quot;string&quot;,
+  &quot;type&quot;: &quot;string&quot;,
+  &quot;image&quot;: null,
+  &quot;x&quot;: null,
+  &quot;y&quot;: null,
+  &quot;config&quot;: null,
+  &quot;console_type&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">201</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-nodes-node_id">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/nodes/{node_id}</code>
+  </header>
+  <h2>Get Node</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="patch-api-nodes-node_id">
+  <header>
+    <span class="badge" style="background:#f59e0b">PATCH</span>
+    <code class="path">/api/nodes/{node_id}</code>
+  </header>
+  <h2>Update Node</h2>
+  <p class="desc">Update node fields: name, config (startup config), x, y position.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;name&quot;: null,
+  &quot;config&quot;: null,
+  &quot;x&quot;: null,
+  &quot;y&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="delete-api-nodes-node_id">
+  <header>
+    <span class="badge" style="background:#ef4444">DEL</span>
+    <code class="path">/api/nodes/{node_id}</code>
+  </header>
+  <h2>Delete Node</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">204</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-nodes-node_id-rdp-config">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/nodes/{node_id}/rdp-config</code>
+  </header>
+  <h2>Set Rdp Config</h2>
+  <p class="desc">Store RDP host/port for a node and mark it ready.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;host&quot;: &quot;string&quot;,
+  &quot;port&quot;: 0
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-nodes-node_id-start">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/nodes/{node_id}/start</code>
+  </header>
+  <h2>Start Node</h2>
+  <p class="desc">Start a node. For VNC nodes, spawns QEMU and assigns a VNC port.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-nodes-node_id-stop">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/nodes/{node_id}/stop</code>
+  </header>
+  <h2>Stop Node</h2>
+  <p class="desc">Stop a node. For VNC nodes, kills the QEMU process.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-networks">networks</h1>
+<article class="endpoint" id="get-api-networks">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/networks/</code>
+  </header>
+  <h2>List Networks</h2>
+  
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-networks-links">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/networks/links</code>
+  </header>
+  <h2>Create Link</h2>
+  
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;lab_id&quot;: &quot;string&quot;,
+  &quot;src_node_id&quot;: &quot;string&quot;,
+  &quot;dst_node_id&quot;: &quot;string&quot;,
+  &quot;style&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">201</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-networks-links-lab_id">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/networks/links/{lab_id}</code>
+  </header>
+  <h2>List Links</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="delete-api-networks-links-link_id">
+  <header>
+    <span class="badge" style="background:#ef4444">DEL</span>
+    <code class="path">/api/networks/links/{link_id}</code>
+  </header>
+  <h2>Delete Link</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>link_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">204</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="patch-api-networks-links-link_id-quality">
+  <header>
+    <span class="badge" style="background:#f59e0b">PATCH</span>
+    <code class="path">/api/networks/links/{link_id}/quality</code>
+  </header>
+  <h2>Set Link Quality</h2>
+  <p class="desc">Update quality settings for a link (delay, jitter, loss, bandwidth, style).</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>link_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;delay_ms&quot;: null,
+  &quot;jitter_ms&quot;: null,
+  &quot;loss_pct&quot;: null,
+  &quot;bandwidth_kbps&quot;: null,
+  &quot;style&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-templates">templates</h1>
+<article class="endpoint" id="get-api-templates">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/templates/</code>
+  </header>
+  <h2>List Templates</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>category</code></td><td>query</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-templates-categories">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/templates/categories</code>
+  </header>
+  <h2>List Categories</h2>
+  
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-templates-template_id">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/templates/{template_id}</code>
+  </header>
+  <h2>Get Template</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>template_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-templates-template_id-deploy">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/templates/{template_id}/deploy</code>
+  </header>
+  <h2>Deploy Template</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>template_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>lab_name</code></td><td>query</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-system">system</h1>
+<article class="endpoint" id="get-api-system-email-health">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/system/email-health</code>
+  </header>
+  <h2>Email Health</h2>
+  <p class="desc">Provider state for transactional email (Module 8).</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-system-first-run">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/system/first-run</code>
+  </header>
+  <h2>First Run Status</h2>
+  <p class="desc">Whether the install has completed initial setup.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-system-first-run-complete">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/system/first-run/complete</code>
+  </header>
+  <h2>First Run Complete</h2>
+  <p class="desc">Persist the wizard&#x27;s choices.
+
+Idempotency rule: once `complete` is True we refuse — see module docstring.</p>
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;password&quot;: &quot;string&quot;,
+  &quot;telemetry&quot;: true,
+  &quot;license_key&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">201</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-system-health">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/system/health</code>
+  </header>
+  <h2>Health</h2>
+  
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-system-info">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/system/info</code>
+  </header>
+  <h2>System Info</h2>
+  
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-health">health</h1>
+<article class="endpoint" id="get-api-health-docker">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/health/docker</code>
+  </header>
+  <h2>Get Docker Info</h2>
+  <p class="desc">Docker daemon stats.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-health-lab-stats">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/health/lab-stats</code>
+  </header>
+  <h2>Get Lab Stats</h2>
+  <p class="desc">Lab and node statistics from the database.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-health-metrics">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/health/metrics</code>
+  </header>
+  <h2>Get System Metrics</h2>
+  <p class="desc">Combined system + backend process + API health metrics.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-health-network">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/health/network</code>
+  </header>
+  <h2>Get Network Info</h2>
+  <p class="desc">Network: OVS bridges, interfaces.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-backup">backup</h1>
+<article class="endpoint" id="post-api-backup-export">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/backup/export</code>
+  </header>
+  <h2>Export Backup</h2>
+  <p class="desc">Create a .omnilab archive of all OmniLab state.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-backup-import">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/backup/import</code>
+  </header>
+  <h2>Restore Backup</h2>
+  <p class="desc">Restore from a .omnilab archive. Be careful - this can overwrite data.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>overwrite_database</code></td><td>query</td><td>boolean</td><td> <span class="hint">default: <code>true</code></span></td></tr><tr><td><code>overwrite_license</code></td><td>query</td><td>boolean</td><td> <span class="hint">default: <code>false</code></span></td></tr><tr><td><code>overwrite_settings</code></td><td>query</td><td>boolean</td><td> <span class="hint">default: <code>false</code></span></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-backup-preview">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/backup/preview</code>
+  </header>
+  <h2>Preview Backup</h2>
+  <p class="desc">Inspect a .omnilab archive without applying it.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-updates">updates</h1>
+<article class="endpoint" id="get-api-updates-check">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/updates/check</code>
+  </header>
+  <h2>Check For Updates</h2>
+  <p class="desc">Check for a newer OmniLab version. Honors the configured frequency
+unless force=true. Returns cached result if checked recently.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>force</code></td><td>query</td><td>boolean</td><td> <span class="hint">default: <code>false</code></span></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-updates-dismiss">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/updates/dismiss</code>
+  </header>
+  <h2>Dismiss Session</h2>
+  <p class="desc">One-session dismissal. The frontend tracks this in sessionStorage,
+so this endpoint is purely a no-op acknowledgment.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-updates-settings">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/updates/settings</code>
+  </header>
+  <h2>Get Update Settings</h2>
+  <p class="desc">Get current auto-update check settings.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-updates-settings">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/updates/settings</code>
+  </header>
+  <h2>Update Settings</h2>
+  <p class="desc">Change update check preferences.</p>
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;enabled&quot;: null,
+  &quot;frequency_days&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-updates-snooze">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/updates/snooze</code>
+  </header>
+  <h2>Snooze Version</h2>
+  <p class="desc">Hide the update notification for this specific version. User can still
+see it via System -&gt; Updates, but the corner badge stops nagging.</p>
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;version&quot;: &quot;string&quot;
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-console">console</h1>
+<article class="endpoint" id="get-api-console-node_id-info">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/console/{node_id}/info</code>
+  </header>
+  <h2>Console Info</h2>
+  
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section>
+  </main>
+</div>
+<script>
+  // Live search — filters sidebar items by method + path substring
+  (function() {
+    var q = document.getElementById('q');
+    var items = document.querySelectorAll('.nav-op');
+    var groups = document.querySelectorAll('.nav-group');
+    q.addEventListener('input', function() {
+      var v = q.value.trim().toLowerCase();
+      items.forEach(function(el) {
+        var hit = !v || el.dataset.q.indexOf(v) >= 0;
+        el.style.display = hit ? '' : 'none';
+      });
+      groups.forEach(function(g) {
+        var visible = g.querySelectorAll('.nav-op:not([style*="display: none"])').length;
+        g.style.display = visible ? '' : 'none';
+      });
+    });
+
+    // Scroll-spy — highlight sidebar entry for the endpoint in view
+    var endpoints = document.querySelectorAll('.endpoint');
+    var byId = {};
+    items.forEach(function(el) {
+      var href = el.getAttribute('href');
+      if (href && href.charAt(0) === '#') byId[href.slice(1)] = el;
+    });
+    var io = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        var link = byId[e.target.id];
+        if (!link) return;
+        if (e.isIntersecting) {
+          items.forEach(function(el) { el.classList.remove('active'); });
+          link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-30% 0px -60% 0px' });
+    endpoints.forEach(function(el) { io.observe(el); });
+  })();
+</script>
+</body>
+</html>

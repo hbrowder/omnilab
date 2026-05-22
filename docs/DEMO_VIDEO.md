@@ -205,9 +205,9 @@ The 0:15 cut is the highest-leverage variant — it's what you'll post in every 
 ## What I can do without your involvement
 
 - [x] **Done:** script (this file)
-- [ ] Generate `seed-labs/security-stack.json`, `seed-labs/empty.json`, `seed-labs/networking-triangle.json` for pre-prep — say "seed the labs"
-- [ ] Draft Hacker News title + first comment + Product Hunt tagline + LinkedIn launch post tied to the same video — say "draft the launch copy"
-- [ ] Pre-write the caption track as an `.srt` file you can drop straight into the NLE — say "give me the srt"
+- [x] **Done:** seed lab JSONs at `docs/demo-assets/seed-labs/{security-stack,empty,networking-triangle}.json` (+ README with one-shot import loop)
+- [x] **Done:** SRT caption track at `docs/demo-assets/captions/omnilab-90.srt`
+- [x] **Done:** launch copy drafts at `docs/demo-assets/launch-copy.md` (HN, PH, LinkedIn, X thread, README hero, posting schedule)
 
 ## What needs you
 

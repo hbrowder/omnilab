@@ -1,5 +1,7 @@
 import aiosqlite
+
 from core.config import settings
+
 DB_PATH = str(settings.DB_PATH)
 
 async def init_db():
@@ -25,6 +27,16 @@ async def init_db():
             id INTEGER PRIMARY KEY CHECK (id = 1),
             key TEXT, tier TEXT DEFAULT 'free')""")
         await db.execute("INSERT OR IGNORE INTO license (id,tier) VALUES (1,'free')")
+        # CRE-15: first-run wizard + admin auth state. Single-row settings
+        # row, k/v columns. New fields are added as plain ALTER TABLEs below
+        # so existing installs don't lose state on upgrade.
+        await db.execute("""CREATE TABLE IF NOT EXISTS settings (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            first_run_complete INTEGER DEFAULT 0,
+            admin_password_hash TEXT,
+            telemetry_enabled INTEGER DEFAULT 0,
+            updated_at TEXT)""")
+        await db.execute("INSERT OR IGNORE INTO settings (id) VALUES (1)")
         await db.commit()
 
 async def get_db():

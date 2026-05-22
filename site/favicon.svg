@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="OmniLab">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7c5cff"/>
+      <stop offset="100%" stop-color="#2cd4d9"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#g)"/>
+  <g fill="none" stroke="#0b0d12" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- three nodes in a triangle, connected -->
+    <circle cx="22" cy="22" r="5" fill="#0b0d12"/>
+    <circle cx="42" cy="22" r="5" fill="#0b0d12"/>
+    <circle cx="32" cy="44" r="5" fill="#0b0d12"/>
+    <line x1="22" y1="22" x2="42" y2="22"/>
+    <line x1="22" y1="22" x2="32" y2="44"/>
+    <line x1="42" y1="22" x2="32" y2="44"/>
+  </g>
+</svg>

@@ -1,0 +1,46 @@
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = [
+    "backend/static",
+    "backend/*.bak_*",
+    "backend/**/*.bak_*",
+    "frontend",
+    ".venv",
+    "netlab-env",
+]
+
+[tool.ruff.lint]
+# Conservative baseline: pyflakes + pycodestyle-errors + bugbear-critical
+# + isort. We're not enforcing pure style today (E501 already lives in
+# line-length above); the goal is to catch real defects without churning
+# every file in the diff.
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes (undef names, unused imports)
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "B",   # bugbear (likely bugs)
+    "UP",  # pyupgrade (modernize syntax)
+]
+ignore = [
+    "E501",   # line too long — let formatter handle it later
+    "E402",   # module-level imports not at top — billing/license set up state first
+    "B008",   # function calls in defaults — FastAPI Depends() idiom uses this
+    "UP007",  # Optional[X] vs X | None — keep until we drop py3.9 cleanly
+    "UP035",  # typing.X is deprecated — same reason
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests intentionally do weird import-order things (set env, then import).
+"tests/**" = ["E402", "F401", "F811"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra --strict-markers --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning:pydantic.*",
+    "ignore::DeprecationWarning:starlette.*",
+]

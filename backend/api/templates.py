@@ -1,6 +1,9 @@
-import json, uuid
-from fastapi import APIRouter, HTTPException
+import json
+import uuid
+
 from core.database import get_db
+from fastapi import APIRouter, HTTPException
+
 router = APIRouter()
 TEMPLATES = {
     "wazuh-soc": {"id":"wazuh-soc","name":"Wazuh SOC Lab","category":"security","description":"Wazuh SIEM + Kali attacker","difficulty":"intermediate","tags":["siem","wazuh"],"nodes":[{"name":"wazuh-manager","type":"docker","image":"wazuh/wazuh-manager:4.7.0","x":300,"y":100},{"name":"linux-agent","type":"docker","image":"ubuntu:22.04","x":150,"y":300},{"name":"kali-attacker","type":"docker","image":"kalilinux/kali-rolling","x":450,"y":300}],"links":[{"src":"linux-agent","dst":"wazuh-manager"},{"src":"kali-attacker","dst":"linux-agent"}]},
@@ -18,7 +21,8 @@ TEMPLATES = {
 @router.get("/")
 async def list_templates(category: str = None):
     t = list(TEMPLATES.values())
-    if category: t = [x for x in t if x["category"] == category]
+    if category:
+        t = [x for x in t if x["category"] == category]
     return t
 
 @router.get("/categories")
@@ -31,13 +35,15 @@ async def list_categories():
 @router.get("/{template_id}")
 async def get_template(template_id: str):
     t = TEMPLATES.get(template_id)
-    if not t: raise HTTPException(status_code=404, detail="Template not found")
+    if not t:
+        raise HTTPException(status_code=404, detail="Template not found")
     return t
 
 @router.post("/{template_id}/deploy")
 async def deploy_template(template_id: str, lab_name: str = None):
     template = TEMPLATES.get(template_id)
-    if not template: raise HTTPException(status_code=404, detail="Not found")
+    if not template:
+        raise HTTPException(status_code=404, detail="Not found")
     lab_id = str(uuid.uuid4())
     async for db in get_db():
         await db.execute("INSERT INTO labs (id,name,description,category) VALUES (?,?,?,?)",

@@ -2,14 +2,14 @@
 OmniLab Auto-Update Checker API
 Privacy-first: only checks for updates, never installs.
 """
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from datetime import datetime, timedelta, timezone
-from typing import Optional
 import json
 import os
-import requests
 import re
+from datetime import datetime, timedelta, timezone
+
+import requests
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -33,7 +33,7 @@ def _load_state():
             "snoozed_version": None,
         }
     try:
-        with open(UPDATE_STATE_FILE, "r") as f:
+        with open(UPDATE_STATE_FILE) as f:
             return json.load(f)
     except Exception:
         return {"enabled": True, "frequency_days": 1}
@@ -65,7 +65,7 @@ async def check_for_updates(force: bool = False):
     unless force=true. Returns cached result if checked recently.
     """
     state = _load_state()
-    
+
     if not state.get("enabled", True):
         return {
             "current": CURRENT_VERSION,
@@ -73,7 +73,7 @@ async def check_for_updates(force: bool = False):
             "enabled": False,
             "message": "Update checks are disabled",
         }
-    
+
     # Respect check frequency
     if not force and state.get("last_check"):
         try:
@@ -92,7 +92,7 @@ async def check_for_updates(force: bool = False):
                     }
         except Exception:
             pass
-    
+
     # Make the actual check
     try:
         r = requests.get(
@@ -103,12 +103,12 @@ async def check_for_updates(force: bool = False):
         r.raise_for_status()
         data = r.json()
         latest = data.get("version", CURRENT_VERSION)
-        
+
         # Update state
         state["last_check"] = datetime.now(timezone.utc).isoformat()
         state["last_known_version"] = latest
         _save_state(state)
-        
+
         return {
             "current": CURRENT_VERSION,
             "latest": latest,
@@ -144,8 +144,8 @@ async def get_update_settings():
 
 
 class UpdateSettings(BaseModel):
-    enabled: Optional[bool] = None
-    frequency_days: Optional[int] = None
+    enabled: bool | None = None
+    frequency_days: int | None = None
 
 
 @router.post("/settings")

@@ -1,25 +1,26 @@
-from pathlib import Path
-import uvicorn, pathlib, logging
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi import Request
-from fastapi.responses import Response
-import httpx
-from fastapi.responses import FileResponse
+import logging
+import pathlib
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+import httpx
+import uvicorn
+from api.backup import router as backup_router
+from api.billing import router as billing_router
+from api.console import router as console_router
+from api.health import router as health_router
 from api.labs import router as labs_router
 from api.license import router as license_router
-from api.billing import router as billing_router
-from api.nodes import router as nodes_router
 from api.networks import router as networks_router
-from api.templates import router as templates_router
+from api.nodes import router as nodes_router
 from api.system import router as system_router
-from api.health import router as health_router
-from api.backup import router as backup_router
+from api.templates import router as templates_router
 from api.updates import router as updates_router
-from api.console import router as console_router
 from core.database import init_db
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("omnilab")

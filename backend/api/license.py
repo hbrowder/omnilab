@@ -2,25 +2,31 @@
 OmniLab License API
 Handles license key validation and tier enforcement.
 """
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional
-import hmac
-import hashlib
 import base64
-import secrets
+import hashlib
+import hmac
 import json
 import os
+import secrets
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 router = APIRouter()
 
 # Secret used to sign license keys. In production this would be embedded
 # in the binary/package and not in source. For now, generated on first run.
-SECRET_FILE = os.path.join(os.path.dirname(__file__), '..', '.license_secret')
+# Paths are resolved against OMNILAB_LICENSE_DIR (default: backend/) so tests
+# and alternate installs can redirect them without monkeypatching __file__.
+_BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LICENSE_DIR = os.environ.get('OMNILAB_LICENSE_DIR', _BACKEND_DIR)
+SECRET_FILE = os.path.join(LICENSE_DIR, '.license_secret')
+LICENSE_FILE = os.path.join(LICENSE_DIR, '.license.json')
+os.makedirs(LICENSE_DIR, exist_ok=True)
 if not os.path.exists(SECRET_FILE):
     with open(SECRET_FILE, 'w') as f:
         f.write(secrets.token_hex(32))
-with open(SECRET_FILE, 'r') as f:
+with open(SECRET_FILE) as f:
     LICENSE_SECRET = f.read().strip().encode()
 
 # Free tier limits
@@ -43,7 +49,7 @@ def generate_key(plan: str, customer: str = "user") -> str:
     return f"OMNI-{grouped}"
 
 
-def verify_key(key: str) -> Optional[dict]:
+def verify_key(key: str) -> dict | None:
     """Verify a license key. Returns {plan, customer} if valid, None if not."""
     if not key or not key.startswith('OMNI-'):
         return None
@@ -68,7 +74,7 @@ class LicenseActivate(BaseModel):
 async def get_license_status():
     """Get current license info."""
     # Read stored license
-    license_file = os.path.join(os.path.dirname(__file__), '..', '.license.json')
+    license_file = LICENSE_FILE
     if not os.path.exists(license_file):
         return {
             'plan': 'free',
@@ -86,7 +92,7 @@ async def get_license_status():
                 'unlimited_nodes': False,
             }
         }
-    with open(license_file, 'r') as f:
+    with open(license_file) as f:
         license_data = json.load(f)
     plan = license_data.get('plan', 'free')
     return {
@@ -115,16 +121,16 @@ async def activate_license(payload: LicenseActivate):
     info = verify_key(payload.key.strip())
     if not info:
         raise HTTPException(status_code=400, detail="Invalid license key")
-    
+
     # Store activated license
-    license_file = os.path.join(os.path.dirname(__file__), '..', '.license.json')
+    license_file = LICENSE_FILE
     with open(license_file, 'w') as f:
         json.dump({
             'key': payload.key.strip(),
             'plan': info['plan'],
             'customer': info['customer'],
         }, f)
-    
+
     return {
         'status': 'activated',
         'plan': info['plan'],
@@ -135,7 +141,7 @@ async def activate_license(payload: LicenseActivate):
 @router.post("/deactivate")
 async def deactivate_license():
     """Remove the activated license (revert to free tier)."""
-    license_file = os.path.join(os.path.dirname(__file__), '..', '.license.json')
+    license_file = LICENSE_FILE
     if os.path.exists(license_file):
         os.remove(license_file)
     return {'status': 'deactivated', 'plan': 'free'}
@@ -144,7 +150,7 @@ async def deactivate_license():
 @router.post("/generate")
 async def generate_license_key(plan: str = 'pro', customer: str = 'user'):
     """
-    Generate a new license key. 
+    Generate a new license key.
     In production, this endpoint should be removed or require admin auth.
     For now, useful for testing.
     """
@@ -158,16 +164,16 @@ async def generate_license_key(plan: str = 'pro', customer: str = 'user'):
 
 def check_tier_limit(current_count: int, resource: str) -> bool:
     """Returns True if action is allowed, False if blocked by free tier."""
-    license_file = os.path.join(os.path.dirname(__file__), '..', '.license.json')
+    license_file = LICENSE_FILE
     if not os.path.exists(license_file):
         plan = 'free'
     else:
-        with open(license_file, 'r') as f:
+        with open(license_file) as f:
             plan = json.load(f).get('plan', 'free')
-    
+
     if plan in ('pro', 'enterprise'):
         return True
-    
+
     # Free tier
     if resource == 'nodes':
         return current_count < FREE_TIER_NODES

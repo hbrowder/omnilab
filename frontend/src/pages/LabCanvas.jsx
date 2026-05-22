@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getTopology, getLab, addNode, deleteNode } from '../utils/api'
 import { useStore } from '../store'
 import { VENDORS, VENDOR_GROUPS, NodeIcon, VendorBadge } from '../components/VendorIcons'
+import NodePanel from '../components/NodePanel'
 
 const IFACES = ['GigabitEthernet0/0','GigabitEthernet0/1','GigabitEthernet0/2','GigabitEthernet0/3','FastEthernet0/0','FastEthernet0/1','eth0','eth1','eth2','eth3','mgmt0','Loopback0']
 const NET_DEFS = {
@@ -103,6 +104,8 @@ export default function LabCanvas() {
   const [contextMenu, setContextMenu] = useState(null)
   const [hoveredId, setHoveredId] = useState(null)
   const [selected, setSelected] = useState(()=>new Set())
+  // CRE-17: node inspector (right-click → Configure)
+  const [selectedNode, setSelectedNode] = useState(null)
   const [ifaceModal, setIfaceModal] = useState(null)
   const [addNodeModal, setAddNodeModal] = useState(null)
   const [addNetModal, setAddNetModal] = useState(null)
@@ -367,6 +370,7 @@ export default function LabCanvas() {
       {l:'🖥  Open Console',a:()=>{alert('Console: '+item.node?.name);setContextMenu(null)}},
       {l:'🔗  Add Link from here',a:()=>{connectingRef.current={srcId:item.node.id};setConnecting({srcId:item.node.id});setContextMenu(null)}},
       {l:'✎  Rename',a:()=>{const v=prompt('Name:',item.node?.name);if(v)setNodes(p=>p.map(n=>n.id===item.node.id?{...n,name:v}:n));setContextMenu(null)}},
+      {l:'⚙  Configure...',a:()=>{setSelectedNode({id:item.node.id,data:{label:item.node?.name,type:item.node?.type,config:item.node?.config}});setContextMenu(null)}},
       {l:'⟳  Wipe Node',a:()=>setContextMenu(null)},
       {l: selectedRef.current.size>1 ? '🗑'+'  Delete All Selected ('+selectedRef.current.size+')' : '🗑'+'  Delete Node',col:'#dc2626',a:()=>{
         const toDelete = selectedRef.current.size > 1 ? new Set(selectedRef.current) : new Set([item.node.id])
@@ -810,6 +814,17 @@ export default function LabCanvas() {
               Delete
             </button>
           </div>
+        </div>
+      )}
+      {selectedNode && (
+        <div style={{position:'fixed',top:0,right:0,bottom:0,zIndex:1000,boxShadow:'-8px 0 24px rgba(0,0,0,.4)'}}>
+          <NodePanel
+            node={selectedNode}
+            onClose={()=>setSelectedNode(null)}
+            onSaved={(id,{name,config})=>{
+              setNodes(p=>p.map(n=>n.id===id?{...n,name:name||n.name,config:config!==undefined?config:n.config}:n))
+            }}
+          />
         </div>
       )}
     </div>

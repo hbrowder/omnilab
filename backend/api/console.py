@@ -1,7 +1,10 @@
-import asyncio, os, json
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
-from core.database import get_db
+import asyncio
+import json
+import os
+
 import ptyprocess
+from core.database import get_db
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
 router = APIRouter()
 _sessions: dict = {}
@@ -56,8 +59,7 @@ async def console_ws(node_id: str, ws: WebSocket):
         async with db.execute(
             "SELECT console_type FROM nodes WHERE id = ?", (node_id,)
         ) as cur:
-            row = await cur.fetchone()
-    console_type = (row["console_type"] or "pty") if row else "pty"
+            await cur.fetchone()
     proc = _sessions.get(node_id)
     if proc is None or not proc.isalive():
         shell = os.environ.get("SHELL", "/bin/bash")
@@ -156,7 +158,6 @@ async def vnc_ws(node_id: str, ws: WebSocket):
             row = await cur.fetchone()
         if row:
             vnc_port = row["vnc_port"]
-            status = row["status"]
 
     if not vnc_port:
         await ws.send_text("ERROR: Node has no VNC port assigned. Start the node first.")
@@ -320,7 +321,8 @@ async def rdp_ws(node_id: str, ws: WebSocket):
         await asyncio.wait([t1, t2], return_when=asyncio.FIRST_COMPLETED)
     finally:
         stop.set()
-        t1.cancel(); t2.cancel()
+        t1.cancel()
+        t2.cancel()
         try:
             writer.close()
             await writer.wait_closed()

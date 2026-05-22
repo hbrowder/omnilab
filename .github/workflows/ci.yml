@@ -32,11 +32,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-          pip install ruff pytest
+          pip install -r backend/requirements-dev.txt
 
       - name: Lint (ruff)
-        run: ruff check backend --output-format=github || true   # non-blocking until we land a clean baseline
+        run: ruff check backend tests --output-format=github
 
       - name: Import smoke test
         run: |
@@ -44,21 +43,31 @@ jobs:
           python -c "import main; print('import OK')"
 
       - name: Run tests
+        run: pytest -q
+
+      - name: Build API docs (no drift check)
         run: |
-          if [ -d backend/tests ]; then
-            cd backend && pytest -q
-          else
-            echo "No backend/tests directory yet — skipping."
-          fi
+          python scripts/build_api_docs.py
+          # Fail if the committed docs are stale relative to the current OpenAPI spec.
+          git diff --exit-code site/docs/api/ || (
+            echo "::error::API docs are out of date — run 'python scripts/build_api_docs.py' and commit the result."
+            exit 1
+          )
 
   frontend:
-    name: Frontend (Node 20)
+    name: Frontend (Node ${{ matrix.node }})
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # CRE-33: Node 20 will be retired 2026-09-16. Test against current
+        # LTS (22) and next LTS (24) so we have signal before the cutoff.
+        node: ["22", "24"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ matrix.node }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -71,6 +80,9 @@ jobs:
         run: npm run build
 
       - name: Upload built bundle
+        # Only upload from one Node version — both produce the same dist.
+        # Pin to 22 (current LTS) so the artifact is stable as we adopt 24.
+        if: matrix.node == '22'
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
