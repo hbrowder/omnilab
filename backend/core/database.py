@@ -1,5 +1,7 @@
 import aiosqlite
+
 from core.config import settings
+
 DB_PATH = str(settings.DB_PATH)
 
 async def init_db():

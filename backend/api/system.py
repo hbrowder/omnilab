@@ -1,6 +1,9 @@
-import os, shutil, platform
-from fastapi import APIRouter
+import platform
+import shutil
+
 from core.config import settings
+from fastapi import APIRouter
+
 router = APIRouter()
 
 @router.get("/health")

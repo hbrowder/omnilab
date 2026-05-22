@@ -28,9 +28,8 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 # Stripe SDK - imported lazily so the module loads even if not installed yet
@@ -41,15 +40,16 @@ except ImportError:
     stripe = None  # type: ignore
     STRIPE_AVAILABLE = False
 
-# License system from CRE-4 (already deployed). We call its key generator
-# directly when a checkout succeeds.
+# License system from CRE-4 (already deployed). We call the underlying
+# `generate_key` sync helper directly — NOT the `generate_license_key`
+# FastAPI endpoint function (that one is async and would return a coroutine).
 try:
-    from api.license import generate_license_key  # type: ignore
+    from api.license import generate_key as _license_generate_key  # type: ignore
     LICENSE_AVAILABLE = True
 except ImportError:
     # Fall back to a no-op stub so this module still loads if the license
     # module hasn't been deployed yet for some reason.
-    generate_license_key = None  # type: ignore
+    _license_generate_key = None  # type: ignore
     LICENSE_AVAILABLE = False
 
 logger = logging.getLogger("omnilab.billing")
@@ -100,6 +100,7 @@ def _log_email(template: str, recipient: str, context: dict) -> None:
         "context": context,
     }
     try:
+        EMAIL_LOG.parent.mkdir(parents=True, exist_ok=True)
         with EMAIL_LOG.open("a") as f:
             f.write(json.dumps(entry) + "\n")
     except Exception as exc:  # pragma: no cover - logging-only
@@ -153,8 +154,8 @@ def billing_health():
 # ---------------------------------------------------------------------------
 class CheckoutSessionRequest(BaseModel):
     plan: str  # "monthly" or "yearly"
-    customer_email: Optional[str] = None
-    promo_code: Optional[str] = None  # LAUNCH50, BETA20 (set in Stripe Dashboard)
+    customer_email: str | None = None
+    promo_code: str | None = None  # LAUNCH50, BETA20 (set in Stripe Dashboard)
 
 
 @router.post("/create-checkout-session")
@@ -202,7 +203,7 @@ def create_checkout_session(req: CheckoutSessionRequest):
         )
     except stripe.error.StripeError as exc:  # type: ignore[attr-defined]
         logger.error("Stripe checkout session creation failed: %s", exc)
-        raise HTTPException(status_code=502, detail=str(exc))
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return {"url": session.url, "session_id": session.id}
 
@@ -234,7 +235,7 @@ async def stripe_webhook(request: Request):
             )
     except (stripe.error.SignatureVerificationError, ValueError) as exc:  # type: ignore[attr-defined]
         logger.error("Webhook signature verification failed: %s", exc)
-        raise HTTPException(status_code=400, detail="Invalid signature")
+        raise HTTPException(status_code=400, detail="Invalid signature") from exc
 
     event_type = event.get("type") if isinstance(event, dict) else event["type"]
     data_obj = (
@@ -251,9 +252,9 @@ async def stripe_webhook(request: Request):
         plan = data_obj.get("metadata", {}).get("plan", "yearly")
 
         # Generate a license key via CRE-4 module.
-        if LICENSE_AVAILABLE and generate_license_key:
+        if LICENSE_AVAILABLE and _license_generate_key:
             try:
-                license_key = generate_license_key(
+                license_key = _license_generate_key(
                     plan="pro", customer=customer_email
                 )
             except Exception as exc:  # pragma: no cover - defensive

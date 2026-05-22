@@ -1,23 +1,25 @@
 """
 OmniLab Backup & Restore API
 """
-from fastapi import APIRouter, HTTPException, UploadFile, File
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-import tarfile
-import tempfile
+import io
 import json
 import os
-import io
 import shutil
-import sqlite3
-from datetime import datetime, timezone
 import socket
+import sqlite3
+import tarfile
+import tempfile
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 router = APIRouter()
 
 # Use the actual OmniLab data directory (~/.omnilab) from config
 from core.config import settings as _settings
+
 BASE_DIR = str(_settings.BASE_DIR)
 DB_PATH = os.path.join(BASE_DIR, "omnilab.db")
 # License module stores in backend/ not BASE_DIR (legacy quirk)
@@ -34,7 +36,7 @@ async def export_backup():
     """Create a .omnilab archive of all OmniLab state."""
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".omnilab")
     tmp.close()
-    
+
     try:
         with tarfile.open(tmp.name, "w:gz") as tar:
             # Manifest
@@ -43,21 +45,21 @@ async def export_backup():
             info = tarfile.TarInfo(name="manifest.json")
             info.size = len(manifest_bytes)
             tar.addfile(info, io.BytesIO(manifest_bytes))
-            
+
             # SQLite database
             if os.path.exists(DB_PATH):
                 tar.add(DB_PATH, arcname="omnilab.db")
-            
+
             # License (if any)
             if os.path.exists(LICENSE_FILE):
                 tar.add(LICENSE_FILE, arcname="license.json")
             if os.path.exists(LICENSE_SECRET):
                 tar.add(LICENSE_SECRET, arcname="license_secret")
-            
+
             # Settings
             if os.path.exists(SETTINGS_FILE):
                 tar.add(SETTINGS_FILE, arcname="settings.json")
-            
+
             # Individual lab JSON exports (redundant safety net)
             labs_data = _export_all_labs()
             for lab_id, lab_json in labs_data.items():
@@ -65,7 +67,7 @@ async def export_backup():
                 info = tarfile.TarInfo(name=f"labs/lab-{lab_id}.json")
                 info.size = len(lab_bytes)
                 tar.addfile(info, io.BytesIO(lab_bytes))
-        
+
         # Stream the file
         def iterfile():
             with open(tmp.name, "rb") as f:
@@ -75,7 +77,7 @@ async def export_backup():
                         break
                     yield chunk
             os.unlink(tmp.name)  # cleanup
-        
+
         filename = f"omnilab-backup-{datetime.now().strftime('%Y%m%d-%H%M%S')}.omnilab"
         return StreamingResponse(
             iterfile(),
@@ -85,7 +87,7 @@ async def export_backup():
     except Exception as e:
         if os.path.exists(tmp.name):
             os.unlink(tmp.name)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/preview")
@@ -94,11 +96,11 @@ async def preview_backup(file: UploadFile = File(...)):
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".omnilab")
     tmp.write(await file.read())
     tmp.close()
-    
+
     try:
         with tarfile.open(tmp.name, "r:gz") as tar:
             names = tar.getnames()
-            
+
             # Read manifest
             try:
                 manifest_member = tar.getmember("manifest.json")
@@ -106,13 +108,13 @@ async def preview_backup(file: UploadFile = File(...)):
                 manifest = json.loads(manifest_bytes.decode())
             except (KeyError, Exception):
                 manifest = {"warning": "No manifest found - older archive?"}
-            
+
             # Count what's inside
             has_db = "omnilab.db" in names
             has_license = "license.json" in names
             has_settings = "settings.json" in names
             lab_files = [n for n in names if n.startswith("labs/")]
-            
+
             return {
                 "manifest": manifest,
                 "contents": {
@@ -136,7 +138,7 @@ class RestoreOptions(BaseModel):
 
 
 @router.post("/import")
-async def restore_backup(file: UploadFile = File(...), 
+async def restore_backup(file: UploadFile = File(...),
                          overwrite_database: bool = True,
                          overwrite_license: bool = False,
                          overwrite_settings: bool = False):
@@ -144,9 +146,9 @@ async def restore_backup(file: UploadFile = File(...),
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".omnilab")
     tmp.write(await file.read())
     tmp.close()
-    
+
     restored = {"database": False, "license": False, "settings": False, "labs": 0}
-    
+
     try:
         with tarfile.open(tmp.name, "r:gz") as tar:
             # Verify manifest
@@ -159,8 +161,8 @@ async def restore_backup(file: UploadFile = File(...),
                         detail=f"Archive version {manifest['archive_version']} is newer than this OmniLab supports (max {ARCHIVE_VERSION})"
                     )
             except KeyError:
-                raise HTTPException(status_code=400, detail="Invalid archive: no manifest")
-            
+                raise HTTPException(status_code=400, detail="Invalid archive: no manifest") from None
+
             # Restore database
             if overwrite_database and "omnilab.db" in tar.getnames():
                 db_member = tar.getmember("omnilab.db")
@@ -170,7 +172,7 @@ async def restore_backup(file: UploadFile = File(...),
                 with open(DB_PATH, "wb") as f:
                     f.write(tar.extractfile(db_member).read())
                 restored["database"] = True
-            
+
             # Restore license
             if overwrite_license:
                 for member_name, target_path in [("license.json", LICENSE_FILE), ("license_secret", LICENSE_SECRET)]:
@@ -178,16 +180,16 @@ async def restore_backup(file: UploadFile = File(...),
                         with open(target_path, "wb") as f:
                             f.write(tar.extractfile(tar.getmember(member_name)).read())
                         restored["license"] = True
-            
+
             # Restore settings
             if overwrite_settings and "settings.json" in tar.getnames():
                 with open(SETTINGS_FILE, "wb") as f:
                     f.write(tar.extractfile(tar.getmember("settings.json")).read())
                 restored["settings"] = True
-            
+
             # Count restored labs (from labs/ folder)
             restored["labs"] = len([n for n in tar.getnames() if n.startswith("labs/")])
-        
+
         return {
             "status": "restored",
             "restored": restored,
@@ -213,7 +215,7 @@ def _build_manifest():
             conn.close()
         except Exception:
             pass
-    
+
     return {
         "archive_version": ARCHIVE_VERSION,
         "omnilab_version": "1.0.0",
@@ -244,7 +246,7 @@ def _export_all_labs():
             # Get links
             cur2.execute("SELECT * FROM links WHERE src_node_id IN (SELECT id FROM nodes WHERE lab_id = ?)", (lab_id,))
             links = [dict(r) for r in cur2.fetchall()]
-            
+
             result[lab_id] = {
                 "lab": dict(row),
                 "nodes": nodes,

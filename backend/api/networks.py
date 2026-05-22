@@ -1,8 +1,8 @@
-import uuid, json
+import uuid
+
+from core.database import get_db
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-from core.database import get_db
 
 router = APIRouter()
 
@@ -11,15 +11,15 @@ class LinkCreate(BaseModel):
     lab_id: str
     src_node_id: str
     dst_node_id: str
-    style: Optional[str] = "solid"
+    style: str | None = "solid"
 
 
 class LinkQuality(BaseModel):
-    delay_ms: Optional[int] = 0
-    jitter_ms: Optional[int] = 0
-    loss_pct: Optional[float] = 0.0
-    bandwidth_kbps: Optional[int] = 0
-    style: Optional[str] = None
+    delay_ms: int | None = 0
+    jitter_ms: int | None = 0
+    loss_pct: float | None = 0.0
+    bandwidth_kbps: int | None = 0
+    style: str | None = None
 
 
 @router.get("/")
@@ -63,11 +63,21 @@ async def set_link_quality(link_id: str, q: LinkQuality):
 
         fields = []
         values = []
-        if q.delay_ms is not None: fields.append("delay_ms = ?"); values.append(q.delay_ms)
-        if q.jitter_ms is not None: fields.append("jitter_ms = ?"); values.append(q.jitter_ms)
-        if q.loss_pct is not None: fields.append("loss_pct = ?"); values.append(q.loss_pct)
-        if q.bandwidth_kbps is not None: fields.append("bandwidth_kbps = ?"); values.append(q.bandwidth_kbps)
-        if q.style is not None: fields.append("style = ?"); values.append(q.style)
+        if q.delay_ms is not None:
+            fields.append("delay_ms = ?")
+            values.append(q.delay_ms)
+        if q.jitter_ms is not None:
+            fields.append("jitter_ms = ?")
+            values.append(q.jitter_ms)
+        if q.loss_pct is not None:
+            fields.append("loss_pct = ?")
+            values.append(q.loss_pct)
+        if q.bandwidth_kbps is not None:
+            fields.append("bandwidth_kbps = ?")
+            values.append(q.bandwidth_kbps)
+        if q.style is not None:
+            fields.append("style = ?")
+            values.append(q.style)
 
         if fields:
             await db.execute(

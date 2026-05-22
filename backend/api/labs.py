@@ -1,14 +1,16 @@
-import json, uuid
+import json
+import uuid
+
+from core.database import get_db
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-from core.database import get_db
+
 router = APIRouter()
 
 class LabCreate(BaseModel):
     name: str
-    description: Optional[str] = ""
-    category: Optional[str] = "general"
+    description: str | None = ""
+    category: str | None = "general"
 
 @router.get("/")
 async def list_labs():
@@ -30,7 +32,8 @@ async def get_lab(lab_id: str):
     async for db in get_db():
         async with db.execute("SELECT * FROM labs WHERE id = ?", (lab_id,)) as cur:
             row = await cur.fetchone()
-            if not row: raise HTTPException(status_code=404, detail="Lab not found")
+            if not row:
+                raise HTTPException(status_code=404, detail="Lab not found")
             return dict(row)
 
 @router.delete("/{lab_id}", status_code=204)
@@ -73,9 +76,9 @@ async def export_lab(lab_id: str):
             "config": n.get("config") or "{}",
         })
     export_links = []
-    for l in link_rows:
-        src_name = node_by_id.get(l.get("src_node_id"), {}).get("name")
-        dst_name = node_by_id.get(l.get("dst_node_id"), {}).get("name")
+    for link in link_rows:
+        src_name = node_by_id.get(link.get("src_node_id"), {}).get("name")
+        dst_name = node_by_id.get(link.get("dst_node_id"), {}).get("name")
         if src_name and dst_name:
             export_links.append({"src_name": src_name, "dst_name": dst_name})
     return {
@@ -93,7 +96,7 @@ async def export_lab(lab_id: str):
 
 class ImportPayload(BaseModel):
     schema_version: int
-    product: Optional[str] = "OmniLab"
+    product: str | None = "OmniLab"
     lab: dict
     nodes: list = []
     links: list = []
@@ -134,17 +137,19 @@ async def import_lab(payload: ImportPayload):
             if not n_name or not n_type:
                 continue
             cfg = n.get("config")
-            if isinstance(cfg, dict): cfg = json.dumps(cfg)
-            if cfg is None: cfg = "{}"
+            if isinstance(cfg, dict):
+                cfg = json.dumps(cfg)
+            if cfg is None:
+                cfg = "{}"
             await db.execute(
                 "INSERT INTO nodes (id, lab_id, name, type, image, config, x, y) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (new_id, lab_id, n_name, n_type, n.get("image"), cfg,
                  n.get("x") or 100, n.get("y") or 100))
             name_to_new_id[n_name] = new_id
 
-        for l in payload.links or []:
-            sid = name_to_new_id.get(l.get("src_name"))
-            did = name_to_new_id.get(l.get("dst_name"))
+        for link in payload.links or []:
+            sid = name_to_new_id.get(link.get("src_name"))
+            did = name_to_new_id.get(link.get("dst_name"))
             if not sid or not did:
                 continue
             await db.execute(

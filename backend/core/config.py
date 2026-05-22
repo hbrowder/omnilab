@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+
 class Settings:
     PORT: int = int(os.getenv("OMNILAB_PORT", 5000))
     DEBUG: bool = True
