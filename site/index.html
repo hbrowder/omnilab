@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d12">
+  <meta name="color-scheme" content="dark">
+  <title>OmniLab — Self-hosted lab platform for networking, security, DevOps, and AI/ML</title>
+  <meta name="description" content="Spin up real multi-VM network, security, DevOps, and AI/ML labs in your browser. Self-hosted, KVM/QEMU-backed, free for personal use.">
+  <link rel="canonical" href="https://omnilab.io/">
+
+  <!-- OpenGraph / Twitter -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://omnilab.io/">
+  <meta property="og:title" content="OmniLab — Self-hosted lab platform">
+  <meta property="og:description" content="Real multi-VM network/security/DevOps/AI labs in your browser. KVM-backed, self-hosted, free for personal use.">
+  <meta property="og:image" content="https://omnilab.io/og-cover.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="OmniLab — Self-hosted lab platform">
+  <meta name="twitter:description" content="Real multi-VM labs in your browser. KVM-backed. Self-hosted. Free for personal use.">
+  <meta name="twitter:image" content="https://omnilab.io/og-cover.png">
+
+  <!-- Favicons (commit the file as site/favicon.svg) -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+  <style>
+    /* ---------- design tokens ---------- */
+    :root {
+      --bg: #0b0d12;
+      --bg-alt: #11141c;
+      --bg-elev: #161a24;
+      --border: #232735;
+      --text: #e6e8ee;
+      --text-muted: #9aa3b6;
+      --accent: #7c5cff;
+      --accent-2: #2cd4d9;
+      --accent-grad: linear-gradient(135deg, #7c5cff 0%, #2cd4d9 100%);
+      --good: #4ade80;
+      --warn: #f59e0b;
+      --bad:  #ef4444;
+      --shadow: 0 8px 30px rgba(0,0,0,.35);
+      --radius: 14px;
+      --maxw: 1120px;
+    }
+
+    /* ---------- reset ---------- */
+    *,*::before,*::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    img, svg { max-width: 100%; display: block; }
+    a { color: inherit; text-decoration: none; }
+    code, pre, kbd { font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace; }
+    h1, h2, h3 { line-height: 1.2; margin: 0 0 .5em; }
+    h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); letter-spacing: -.02em; }
+    h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.01em; }
+    h3 { font-size: 1.15rem; }
+    p  { margin: 0 0 1em; color: var(--text-muted); }
+    p.lead { font-size: 1.2rem; color: var(--text); max-width: 60ch; }
+
+    /* ---------- layout primitives ---------- */
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+    section { padding: 88px 0; border-top: 1px solid var(--border); }
+    section:first-of-type { border-top: none; }
+
+    /* ---------- nav ---------- */
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(12px);
+      background: rgba(11,13,18,.72);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; max-width: var(--maxw); margin: 0 auto;
+    }
+    .brand {
+      font-weight: 700; letter-spacing: -.01em; font-size: 1.05rem;
+      display: inline-flex; align-items: center; gap: 10px;
+    }
+    .brand-mark {
+      width: 26px; height: 26px; border-radius: 8px; background: var(--accent-grad);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset;
+    }
+    .nav-links { display: flex; align-items: center; gap: 28px; font-size: .95rem; color: var(--text-muted); }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      padding: 8px 14px; border-radius: 10px; font-weight: 600;
+      background: var(--accent-grad); color: #0b0d12 !important;
+    }
+    @media (max-width: 720px) {
+      .nav-links a:not(.nav-cta) { display: none; }
+    }
+
+    /* ---------- hero ---------- */
+    .hero { padding: 96px 0 64px; position: relative; overflow: hidden; }
+    .hero::before {
+      content: ""; position: absolute; inset: 0;
+      background:
+        radial-gradient(60% 50% at 70% 20%, rgba(124,92,255,.18), transparent 60%),
+        radial-gradient(50% 40% at 10% 80%, rgba(44,212,217,.12), transparent 60%);
+      pointer-events: none;
+    }
+    .hero-inner { position: relative; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 12px; border-radius: 999px;
+      background: var(--bg-elev); border: 1px solid var(--border);
+      font-size: .85rem; color: var(--text-muted); margin-bottom: 20px;
+    }
+    .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+    h1 .grad {
+      background: var(--accent-grad);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .cta-row {
+      display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 22px; border-radius: 12px; font-weight: 600;
+      border: 1px solid transparent; cursor: pointer;
+      transition: transform .12s ease, background .2s ease, border-color .2s ease;
+    }
+    .btn-primary {
+      background: var(--accent-grad); color: #0b0d12;
+      box-shadow: var(--shadow);
+    }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-ghost {
+      background: var(--bg-elev); border-color: var(--border); color: var(--text);
+    }
+    .btn-ghost:hover { border-color: #3a3f55; }
+
+    /* ---------- install snippet ---------- */
+    .install {
+      margin-top: 48px;
+      background: var(--bg-elev);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      max-width: 720px;
+      box-shadow: var(--shadow);
+    }
+    .install-label { font-size: .82rem; color: var(--text-muted); margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .install pre {
+      margin: 0; padding: 0;
+      font-size: .92rem; line-height: 1.65;
+      overflow-x: auto; white-space: pre;
+      color: #d2d6e0;
+    }
+    .install pre .prompt { color: #6c7393; user-select: none; }
+    .install pre .cmd    { color: #e6e8ee; }
+    .install pre .url    { color: #2cd4d9; }
+    .copy-btn {
+      font-size: .78rem; padding: 4px 9px;
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: 6px;
+      cursor: pointer;
+    }
+    .copy-btn:hover { color: var(--text); border-color: #3a3f55; }
+
+    /* ---------- features grid ---------- */
+    .features-grid {
+      display: grid; gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      margin-top: 36px;
+    }
+    .feature {
+      background: var(--bg-elev); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 22px;
+      transition: border-color .2s ease, transform .2s ease;
+    }
+    .feature:hover { border-color: #3a3f55; transform: translateY(-2px); }
+    .feature .icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: grid; place-items: center; margin-bottom: 14px;
+      background: rgba(124,92,255,.15); color: #b9a8ff;
+    }
+    .feature h3 { margin: 0 0 6px; }
+    .feature p { margin: 0; font-size: .94rem; }
+
+    /* ---------- categories pills ---------- */
+    .categories {
+      display: grid; gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-top: 32px;
+    }
+    .cat {
+      background: var(--bg-elev); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px;
+    }
+    .cat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .cat-name { font-weight: 700; }
+    .cat-count { color: var(--accent-2); font-variant-numeric: tabular-nums; font-size: .9rem; }
+    .cat-examples { color: var(--text-muted); font-size: .9rem; line-height: 1.5; }
+
+    /* ---------- comparison table ---------- */
+    .compare-wrap { margin-top: 36px; overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+    table.compare {
+      width: 100%; min-width: 640px;
+      border-collapse: collapse;
+      background: var(--bg-elev);
+    }
+    table.compare th, table.compare td {
+      padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--border);
+    }
+    table.compare th { font-weight: 600; color: var(--text); background: var(--bg-alt); position: sticky; top: 0; }
+    table.compare td.feat-name { font-weight: 600; color: var(--text); }
+    table.compare tr:last-child td { border-bottom: none; }
+    .check { color: var(--good); font-weight: 700; }
+    .cross { color: var(--bad);  font-weight: 700; }
+    .meh   { color: var(--warn); font-weight: 700; }
+    .col-omni { background: linear-gradient(180deg, rgba(124,92,255,.06), rgba(44,212,217,.04)); }
+
+    /* ---------- pricing ---------- */
+    .pricing {
+      display: grid; gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      margin-top: 36px;
+    }
+    .plan {
+      background: var(--bg-elev); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px; display: flex; flex-direction: column;
+    }
+    .plan.featured {
+      border-color: rgba(124,92,255,.6);
+      box-shadow: 0 0 0 1px rgba(124,92,255,.35), var(--shadow);
+      position: relative;
+    }
+    .plan.featured::before {
+      content: "Most popular"; position: absolute; top: -12px; left: 24px;
+      background: var(--accent-grad); color: #0b0d12;
+      font-size: .72rem; font-weight: 700; letter-spacing: .04em;
+      padding: 4px 10px; border-radius: 999px;
+    }
+    .plan h3 { font-size: 1.1rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .08em; }
+    .price { font-size: 2.6rem; font-weight: 800; letter-spacing: -.02em; margin: 6px 0 10px; }
+    .price small { font-size: 1rem; color: var(--text-muted); font-weight: 500; }
+    .plan ul { list-style: none; padding: 0; margin: 16px 0 24px; }
+    .plan li { padding: 6px 0; color: var(--text-muted); }
+    .plan li::before { content: "✓ "; color: var(--good); font-weight: 700; }
+    .plan li.disabled::before { content: "✗ "; color: var(--text-muted); }
+    .plan li.disabled { opacity: .6; }
+    .plan .btn { width: 100%; justify-content: center; margin-top: auto; }
+
+    /* ---------- final CTA ---------- */
+    .final-cta {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 56px 32px;
+      text-align: center;
+      margin: 32px 0 0;
+      position: relative; overflow: hidden;
+    }
+    .final-cta::before {
+      content: ""; position: absolute; inset: 0;
+      background:
+        radial-gradient(70% 100% at 50% 0%, rgba(124,92,255,.18), transparent 60%);
+      pointer-events: none;
+    }
+    .final-cta h2 { font-size: clamp(1.6rem, 3.5vw, 2.4rem); position: relative; }
+    .final-cta p { max-width: 56ch; margin: 0 auto 24px; position: relative; }
+    .final-cta .cta-row { justify-content: center; position: relative; }
+
+    /* ---------- footer ---------- */
+    footer { padding: 56px 0 80px; border-top: 1px solid var(--border); }
+    .foot-grid {
+      display: grid; gap: 32px;
+      grid-template-columns: 1.4fr repeat(3, 1fr);
+    }
+    @media (max-width: 720px) {
+      .foot-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .foot-col h4 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); margin: 0 0 12px; }
+    .foot-col a { display: block; padding: 4px 0; color: var(--text-muted); font-size: .92rem; }
+    .foot-col a:hover { color: var(--text); }
+    .foot-brand p { font-size: .9rem; margin-top: 12px; }
+    .foot-bottom {
+      margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+      color: var(--text-muted); font-size: .85rem;
+    }
+
+    /* ---------- accessibility & motion ---------- */
+    :focus-visible {
+      outline: 2px solid var(--accent-2);
+      outline-offset: 2px; border-radius: 6px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============ NAV ============ -->
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="#top" aria-label="OmniLab home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        OmniLab
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#labs">Lab types</a>
+        <a href="#compare">vs. others</a>
+        <a href="#pricing">Pricing</a>
+        <a href="https://github.com/hbrowder/omnilab" rel="noopener">GitHub</a>
+        <a href="https://github.com/hbrowder/omnilab/releases/latest" rel="noopener" class="nav-cta">Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <div class="wrap hero-inner">
+        <span class="eyebrow"><span class="dot" aria-hidden="true"></span>v1.0 — self-hosted, KVM-backed, no telemetry</span>
+        <h1>Real multi-VM labs <span class="grad">in your browser</span>.<br>Self-hosted in 90 seconds.</h1>
+        <p class="lead">
+          Spin up networking, security, DevOps, and AI/ML labs on a real KVM/QEMU substrate.
+          No Docker shortcuts. No SaaS lock-in. No telemetry. Free for personal use.
+        </p>
+
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://github.com/hbrowder/omnilab/releases/latest" rel="noopener">
+            Download free →
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/hbrowder/omnilab" rel="noopener">
+            Star on GitHub
+          </a>
+        </div>
+
+        <div class="install" aria-label="Install command">
+          <div class="install-label">
+            <span>Install on Ubuntu / Debian / RHEL</span>
+            <button class="copy-btn" type="button" onclick="copyInstall(this)" aria-label="Copy install commands">Copy</button>
+          </div>
+<pre id="install-cmd"><span class="prompt">$ </span><span class="cmd">wget </span><span class="url">https://github.com/hbrowder/omnilab/releases/latest/omnilab.deb</span>
+<span class="prompt">$ </span><span class="cmd">sudo dpkg -i omnilab.deb</span>
+<span class="prompt">$ </span><span class="cmd">omnilab start</span>
+<span class="prompt">→ </span><span class="url">http://your-server:5000</span></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FEATURES ============ -->
+    <section id="features">
+      <div class="wrap">
+        <h2>Why OmniLab</h2>
+        <p class="lead">Six things every other browser-based lab tool gets wrong, in our opinion.</p>
+
+        <div class="features-grid">
+          <div class="feature">
+            <div class="icon" aria-hidden="true">🔒</div>
+            <h3>Security stacks that actually work</h3>
+            <p>Real Linux kernels means real Suricata, Wazuh, and Kali tooling. IDS evasion against a containerized kernel isn't IDS evasion.</p>
+          </div>
+          <div class="feature">
+            <div class="icon" aria-hidden="true">🛠</div>
+            <h3>DevOps without the cloud bill</h3>
+            <p>Multi-node Kubernetes, Terraform-managed VMs, CI runners on isolated networks — all on hardware you already own.</p>
+          </div>
+          <div class="feature">
+            <div class="icon" aria-hidden="true">🤖</div>
+            <h3>AI/ML labs, GPU-aware</h3>
+            <p>Spin Ollama next to Jupyter, mount a passthrough GPU, run RAG experiments. Snapshot the lab and ship it to a teammate.</p>
+          </div>
+          <div class="feature">
+            <div class="icon" aria-hidden="true">🌐</div>
+            <h3>Networking without the licence dance</h3>
+            <p>Mix Cisco, Juniper, VyOS, and FRR in the same topology. Configure link quality (delay, jitter, loss, bandwidth) per edge.</p>
+          </div>
+          <div class="feature">
+            <div class="icon" aria-hidden="true">📦</div>
+            <h3>Portable lab format</h3>
+            <p>Every lab exports to a portable JSON file. Hand it to a student, drop it in a repo, version it in git. Re-import anywhere.</p>
+          </div>
+          <div class="feature">
+            <div class="icon" aria-hidden="true">⚡</div>
+            <h3>Browser, CLI, or API</h3>
+            <p>Drag-and-drop topology editor for designers. Full CLI (<code>omnilab lab deploy …</code>) for scripters. REST API for everyone else.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ LAB CATEGORIES ============ -->
+    <section id="labs">
+      <div class="wrap">
+        <h2>Lab types out of the box</h2>
+        <p class="lead">One-click templates for the labs people actually build. Or design your own.</p>
+
+        <div class="categories">
+          <div class="cat">
+            <div class="cat-head"><span class="cat-name">Security</span><span class="cat-count">4 templates</span></div>
+            <div class="cat-examples">Wazuh SIEM + agent + Kali attacker · Pentest lab (Kali + Metasploitable) · Threat hunting (Suricata + Zeek + TheHive) · MITRE Caldera adversary sim</div>
+          </div>
+          <div class="cat">
+            <div class="cat-head"><span class="cat-name">DevOps</span><span class="cat-count">3 templates</span></div>
+            <div class="cat-examples">Kubernetes 3-node cluster · CI/CD pipeline (Gitea + Jenkins + Harbor) · Ansible controller + nodes</div>
+          </div>
+          <div class="cat">
+            <div class="cat-head"><span class="cat-name">AI / ML</span><span class="cat-count">2 templates</span></div>
+            <div class="cat-examples">LLM security lab (Ollama + Open WebUI + attacker) · MLOps lab (MLflow + Jupyter + MinIO)</div>
+          </div>
+          <div class="cat">
+            <div class="cat-head"><span class="cat-name">Networking</span><span class="cat-count">1 template</span></div>
+            <div class="cat-examples">VyOS routing (BGP/OSPF) — and full drag-and-drop topology editor for everything else</div>
+          </div>
+        </div>
+
+        <p style="margin-top: 28px; font-size: .92rem;">More templates ship with every release. The drag-and-drop editor and JSON import work today for any topology you can describe.</p>
+      </div>
+    </section>
+
+    <!-- ============ COMPARISON ============ -->
+    <section id="compare">
+      <div class="wrap">
+        <h2>vs. the alternatives</h2>
+        <p class="lead">Honest comparison. We're not better at everything — but we're better at the things that matter most for self-hosted, browser-first lab work.</p>
+
+        <div class="compare-wrap" role="region" aria-label="Comparison table" tabindex="0">
+          <table class="compare">
+            <thead>
+              <tr>
+                <th scope="col">Feature</th>
+                <th scope="col" class="col-omni">OmniLab</th>
+                <th scope="col">EVE-NG</th>
+                <th scope="col">GNS3</th>
+                <th scope="col">Cisco CML</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="feat-name">Browser-native UI</td>
+                <td class="col-omni"><span class="check">✓</span> First-class</td>
+                <td><span class="meh">~</span> Pro tier</td>
+                <td><span class="cross">✗</span> Desktop client</td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr>
+                <td class="feat-name">Real KVM/QEMU VMs (not containers)</td>
+                <td class="col-omni"><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr>
+                <td class="feat-name">Self-hosted, on your laptop</td>
+                <td class="col-omni"><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="cross">✗</span> Server only</td>
+              </tr>
+              <tr>
+                <td class="feat-name">Multi-domain (sec / DevOps / AI / net)</td>
+                <td class="col-omni"><span class="check">✓</span></td>
+                <td><span class="meh">~</span> Networking-first</td>
+                <td><span class="meh">~</span> Networking-first</td>
+                <td><span class="cross">✗</span> Cisco gear only</td>
+              </tr>
+              <tr>
+                <td class="feat-name">CLI + REST API</td>
+                <td class="col-omni"><span class="check">✓</span> Full coverage</td>
+                <td><span class="meh">~</span> Limited</td>
+                <td><span class="meh">~</span> Limited</td>
+                <td><span class="check">✓</span></td>
+              </tr>
+              <tr>
+                <td class="feat-name">Portable lab format (JSON export/import)</td>
+                <td class="col-omni"><span class="check">✓</span></td>
+                <td><span class="meh">~</span> .unl proprietary</td>
+                <td><span class="meh">~</span> Project tar</td>
+                <td><span class="meh">~</span></td>
+              </tr>
+              <tr>
+                <td class="feat-name">Free for personal use</td>
+                <td class="col-omni"><span class="check">✓</span> All features</td>
+                <td><span class="meh">~</span> Community edition</td>
+                <td><span class="check">✓</span></td>
+                <td><span class="cross">✗</span> Paid only</td>
+              </tr>
+              <tr>
+                <td class="feat-name">No telemetry, no SaaS</td>
+                <td class="col-omni"><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="check">✓</span></td>
+                <td><span class="meh">~</span> Phones home</td>
+              </tr>
+              <tr>
+                <td class="feat-name">Install time to first lab</td>
+                <td class="col-omni"><span class="check">✓</span> ~90 seconds</td>
+                <td><span class="meh">~</span> 30–60 min</td>
+                <td><span class="meh">~</span> 30–60 min</td>
+                <td><span class="cross">✗</span> Half a day</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PRICING ============ -->
+    <section id="pricing">
+      <div class="wrap">
+        <h2>Pricing</h2>
+        <p class="lead">Free is fully functional for one user. Pro and Enterprise unlock multi-user workflows and priority support.</p>
+
+        <div class="pricing">
+          <div class="plan">
+            <h3>Free</h3>
+            <div class="price">$0<small>/forever</small></div>
+            <p>Everything you need to learn, build, and prototype.</p>
+            <ul>
+              <li>All lab templates</li>
+              <li>Unlimited nodes per lab</li>
+              <li>Drag-and-drop editor, CLI, REST API</li>
+              <li>JSON export/import</li>
+              <li>Single user</li>
+              <li class="disabled">Team / multi-user</li>
+              <li class="disabled">Scheduled backups</li>
+              <li class="disabled">Priority email support</li>
+            </ul>
+            <a class="btn btn-ghost" href="https://github.com/hbrowder/omnilab/releases/latest" rel="noopener">Download</a>
+          </div>
+
+          <div class="plan featured">
+            <h3>Pro</h3>
+            <div class="price">$12<small>/month</small></div>
+            <p>For consultants, instructors, and small teams running labs daily.</p>
+            <ul>
+              <li>Everything in Free</li>
+              <li>Multi-user (up to 5 seats)</li>
+              <li>Scheduled lab backups</li>
+              <li>Priority security patches</li>
+              <li>Priority email support (24h)</li>
+              <li>Commercial use license</li>
+            </ul>
+            <a class="btn btn-primary" href="https://github.com/hbrowder/omnilab#pro" rel="noopener">Start Pro</a>
+          </div>
+
+          <div class="plan">
+            <h3>Enterprise</h3>
+            <div class="price">Custom</div>
+            <p>For training organizations, MSSPs, and university programs.</p>
+            <ul>
+              <li>Everything in Pro</li>
+              <li>Unlimited seats</li>
+              <li>SSO / SAML</li>
+              <li>On-prem deployment assistance</li>
+              <li>Custom lab template development</li>
+              <li>SLA + named support engineer</li>
+            </ul>
+            <a class="btn btn-ghost" href="mailto:harold@omnilab.io?subject=OmniLab%20Enterprise%20inquiry">Contact sales</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FINAL CTA ============ -->
+    <section>
+      <div class="wrap">
+        <div class="final-cta">
+          <h2>Spin up your first lab in 90 seconds.</h2>
+          <p>Free for personal use. Runs on your laptop, your homelab, or a $5 VPS. No account required.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="https://github.com/hbrowder/omnilab/releases/latest" rel="noopener">Download free →</a>
+            <a class="btn btn-ghost" href="https://github.com/hbrowder/omnilab" rel="noopener">Read the docs</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer>
+    <div class="wrap">
+      <div class="foot-grid">
+        <div class="foot-col foot-brand">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true"></span>
+            OmniLab
+          </div>
+          <p>Self-hosted lab platform for networking, security, DevOps, and AI/ML.<br>Real KVM/QEMU VMs in your browser.</p>
+        </div>
+        <div class="foot-col">
+          <h4>Product</h4>
+          <a href="#features">Features</a>
+          <a href="#labs">Lab types</a>
+          <a href="#pricing">Pricing</a>
+          <a href="https://github.com/hbrowder/omnilab/releases" rel="noopener">Releases</a>
+        </div>
+        <div class="foot-col">
+          <h4>Resources</h4>
+          <a href="https://github.com/hbrowder/omnilab" rel="noopener">GitHub</a>
+          <a href="https://github.com/hbrowder/omnilab/tree/main/docs" rel="noopener">Documentation</a>
+          <a href="https://github.com/hbrowder/omnilab/issues" rel="noopener">Issues</a>
+          <a href="https://github.com/hbrowder/omnilab/blob/main/CHANGELOG.md" rel="noopener">Changelog</a>
+        </div>
+        <div class="foot-col">
+          <h4>Company</h4>
+          <a href="mailto:harold@omnilab.io">Contact</a>
+          <a href="/privacy.html">Privacy</a>
+          <a href="/terms.html">Terms</a>
+          <a href="https://github.com/hbrowder/omnilab/blob/main/LICENSE" rel="noopener">License</a>
+        </div>
+      </div>
+      <div class="foot-bottom">
+        <div>© 2026 OmniLab. Built by hbrowder.</div>
+        <div>No tracking. No cookies. No third-party scripts.</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- minimal inline JS — only the copy button, no trackers, no frameworks -->
+  <script>
+    function copyInstall(btn) {
+      var pre = document.getElementById('install-cmd');
+      var lines = pre.innerText.split('\n').filter(function(l) {
+        // skip the "→ http://..." output line; keep only $-prefixed commands
+        var t = l.trim();
+        return t.startsWith('$');
+      }).map(function(l) { return l.replace(/^\s*\$\s*/, ''); });
+      var text = lines.join('\n');
+      navigator.clipboard.writeText(text).then(function() {
+        var original = btn.innerText;
+        btn.innerText = 'Copied ✓';
+        setTimeout(function() { btn.innerText = original; }, 1600);
+      }, function() {
+        btn.innerText = 'Press ⌘C';
+      });
+    }
+  </script>
+
+</body>
+</html>
