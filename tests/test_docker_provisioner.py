@@ -377,3 +377,48 @@ async def test_exec_console_raises_when_container_missing():
 
     with pytest.raises(DockerProvisionerError, match="not found"):
         await p.exec_console("node-1")
+
+
+# ------------------------------------------------------------ get_node_address
+
+
+@pytest.mark.asyncio
+async def test_get_node_address_returns_ip_on_lab_network():
+    p, client = make_provisioner()
+    container = MagicMock()
+    container.attrs = {
+        "NetworkSettings": {
+            "Networks": {
+                f"{NETWORK_PREFIX}lab-1": {"IPAddress": "172.20.0.5"},
+                "bridge": {"IPAddress": "172.17.0.2"},
+            }
+        }
+    }
+    client.containers.get.return_value = container
+
+    ip = await p.get_node_address("node-1", "lab-1")
+
+    assert ip == "172.20.0.5"
+    client.containers.get.assert_called_once_with(f"{CONTAINER_PREFIX}node-1")
+    container.reload.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_get_node_address_returns_empty_when_detached_from_lab_network():
+    p, client = make_provisioner()
+    container = MagicMock()
+    container.attrs = {
+        "NetworkSettings": {"Networks": {"bridge": {"IPAddress": "172.17.0.2"}}}
+    }
+    client.containers.get.return_value = container
+
+    assert await p.get_node_address("node-1", "lab-1") == ""
+
+
+@pytest.mark.asyncio
+async def test_get_node_address_raises_when_container_missing():
+    p, client = make_provisioner()
+    client.containers.get.side_effect = NotFound("nope")
+
+    with pytest.raises(DockerProvisionerError, match="not found"):
+        await p.get_node_address("node-1", "lab-1")

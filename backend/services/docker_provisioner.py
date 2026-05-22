@@ -228,6 +228,37 @@ class DockerProvisioner:
 
     # ----------------------------------------------------------------- console
 
+    async def get_node_address(self, node_id: str, lab_id: str) -> str:
+        """Return the container's IP on ``omnilab-lab-<lab_id>``.
+
+        Empty string if the container exists but isn't attached to that
+        network (e.g. user manually detached it). Raises
+        ``DockerProvisionerError`` if the container is missing.
+
+        Used by the web-UI reverse proxy to find the backend address for
+        ``http://<ip>:<web_port>/...``.
+        """
+        container_name = _container_name(node_id)
+        network_name = _network_name(lab_id)
+
+        def _get() -> str:
+            try:
+                container = self.client.containers.get(container_name)
+            except NotFound as exc:
+                raise DockerProvisionerError(
+                    f"container {container_name} not found"
+                ) from exc
+            container.reload()
+            networks = (
+                container.attrs.get("NetworkSettings", {}).get("Networks", {}) or {}
+            )
+            net = networks.get(network_name) or {}
+            return str(net.get("IPAddress", "") or "")
+
+        return await asyncio.to_thread(_get)
+
+    # --------------------------------------------------------------- exec_console
+
     async def exec_console(self, node_id: str) -> tuple[str, str]:
         """Return ``(container_name, shell_path)`` for the xterm.js console.
 

@@ -16,6 +16,7 @@ from api.nodes import router as nodes_router
 from api.system import router as system_router
 from api.templates import router as templates_router
 from api.updates import router as updates_router
+from api.web_proxy import router as web_proxy_router
 from core.database import init_db
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,6 +47,12 @@ app.include_router(backup_router,   prefix="/api/backup",    tags=["backup"])
 app.include_router(health_router,   prefix="/api/health",    tags=["health"])
 app.include_router(system_router,    prefix="/api/system")
 app.include_router(console_router,   prefix="/api/console")
+# CRE-39: docker-node web-UI reverse proxy. Routes are
+#   /labs/{lab_id}/nodes/{node_id}/web/*       (HTTP)
+#   /labs/{lab_id}/nodes/{node_id}/web-ws/*    (WebSocket)
+#   /api/labs/{lab_id}/nodes/{node_id}/web-info (metadata)
+# MUST be included before the SPA catch-all below so requests aren't swallowed.
+app.include_router(web_proxy_router)
 
 
 # Reverse proxy for Guacamole web app
