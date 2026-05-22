@@ -1,0 +1,84 @@
+# Dependabot — weekly bumps for pip, npm, github-actions (CRE-35)
+#
+# Policy:
+#   - Group dev/test deps into one PR/week to cut PR noise
+#   - Keep production deps (FastAPI, Pydantic, etc.) as individual PRs so
+#     we can audit each one
+#   - Daily for security advisories regardless of group
+#   - 5 open PR cap per ecosystem so the queue never balloons
+#   - Reviewer: hbrowder (solo)
+
+version: 2
+updates:
+  # ---------------- Python (backend) ----------------
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 5
+    assignees:
+      - hbrowder
+    labels:
+      - dependencies
+      - python
+    commit-message:
+      prefix: "deps(py)"
+      include: scope
+    groups:
+      python-dev:
+        patterns:
+          - pytest*
+          - ruff
+          - bcrypt
+        update-types:
+          - minor
+          - patch
+
+  # ---------------- npm (frontend) ----------------
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 5
+    assignees:
+      - hbrowder
+    labels:
+      - dependencies
+      - javascript
+    commit-message:
+      prefix: "deps(js)"
+      include: scope
+    groups:
+      frontend-dev:
+        patterns:
+          - "@vitejs/*"
+          - vite
+          - eslint*
+          - "@types/*"
+        update-types:
+          - minor
+          - patch
+
+  # ---------------- GitHub Actions ----------------
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 3
+    assignees:
+      - hbrowder
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "ci"
+      include: scope
