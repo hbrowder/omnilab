@@ -5,22 +5,49 @@ import os
 import ptyprocess
 from core.database import get_db
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from services.docker_provisioner import (
+    DockerProvisioner,
+    DockerProvisionerError,
+)
 
 router = APIRouter()
 _sessions: dict = {}
+
+
+# ---------------------------------------------------------------------------
+# Lazy docker provisioner — same pattern as api/nodes.py. Used to detect the
+# right shell for a docker node's console. See _reset_provisioner_for_tests.
+# ---------------------------------------------------------------------------
+_provisioner: DockerProvisioner | None = None
+
+
+def _get_provisioner() -> DockerProvisioner:
+    global _provisioner
+    if _provisioner is None:
+        _provisioner = DockerProvisioner()
+    return _provisioner
+
+
+def _reset_provisioner_for_tests(p: DockerProvisioner | None = None) -> None:
+    global _provisioner
+    _provisioner = p
 
 
 @router.get("/{node_id}/info")
 async def console_info(node_id: str):
     async for db in get_db():
         async with db.execute(
-            "SELECT id, console_type FROM nodes WHERE id = ?", (node_id,)
+            "SELECT id, type, console_type FROM nodes WHERE id = ?", (node_id,)
         ) as cur:
             row = await cur.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Node not found")
+    node_type = (row["type"] or "").lower()
+    # Docker nodes always use the PTY-style WebSocket — same URL, the server
+    # dispatches based on node.type.
     return {
         "node_id": node_id,
+        "node_type": node_type,
         "console_type": row["console_type"] or "pty",
         "websocket_url": f"ws://localhost:5000/api/console/{node_id}/ws",
     }
@@ -52,14 +79,138 @@ async def _relay(proc, ws: WebSocket, stop: asyncio.Event):
     stop.set()
 
 
+# ---------------------------------------------------------------------------
+# Docker console relay
+#
+# docker exec -i -t omnilab-<node_id> <shell>
+# The docker SDK gives us a low-level socket; we run blocking reads in a
+# thread and forward bytes to the WebSocket. Resize events translate to
+# exec_resize on the SDK.
+# ---------------------------------------------------------------------------
+
+def _docker_exec_read(sock, n: int = 4096) -> bytes:
+    """Blocking read from the docker exec socket. Returns b'' on EOF."""
+    try:
+        # docker SDK's SocketIO exposes ._sock for the underlying socket.
+        underlying = getattr(sock, "_sock", sock)
+        return underlying.recv(n) or b""
+    except OSError:
+        return b""
+
+
+async def _docker_console_loop(node_id: str, ws: WebSocket):
+    """Drive a docker-exec console over the given WebSocket."""
+    try:
+        p = _get_provisioner()
+    except DockerProvisionerError as exc:
+        await ws.send_text(f"ERROR: {exc}")
+        return
+
+    try:
+        container_name, shell = await p.exec_console(node_id)
+    except DockerProvisionerError as exc:
+        await ws.send_text(f"ERROR: {exc}")
+        return
+
+    # Build an exec instance on the underlying low-level API. Using the SDK's
+    # raw socket gives us the same bidirectional binary channel xterm.js
+    # already expects.
+    api = p.client.api
+    container = p.client.containers.get(container_name)
+    try:
+        exec_id = api.exec_create(
+            container.id,
+            cmd=[shell],
+            tty=True,
+            stdin=True,
+            stdout=True,
+            stderr=True,
+        )["Id"]
+        sock = api.exec_start(exec_id, socket=True, tty=True, demux=False)
+    except Exception as exc:  # noqa: BLE001 — any SDK error becomes a clean WS message
+        await ws.send_text(f"ERROR: docker exec failed: {exc}")
+        return
+
+    loop = asyncio.get_event_loop()
+    stop = asyncio.Event()
+
+    async def _reader():
+        try:
+            while not stop.is_set():
+                data = await loop.run_in_executor(None, _docker_exec_read, sock)
+                if not data:
+                    break
+                try:
+                    await ws.send_bytes(data)
+                except Exception:
+                    break
+        finally:
+            stop.set()
+
+    reader_task = asyncio.create_task(_reader())
+    try:
+        while not stop.is_set():
+            try:
+                msg = await asyncio.wait_for(ws.receive(), timeout=0.05)
+            except asyncio.TimeoutError:
+                continue
+            except WebSocketDisconnect:
+                break
+            if msg.get("type") == "websocket.disconnect":
+                break
+            data = msg.get("bytes")
+            if data:
+                underlying = getattr(sock, "_sock", sock)
+                try:
+                    underlying.send(data)
+                except OSError:
+                    break
+            text = msg.get("text")
+            if text:
+                try:
+                    evt = json.loads(text)
+                    if evt.get("type") == "resize":
+                        api.exec_resize(
+                            exec_id,
+                            height=int(evt.get("rows", 24)),
+                            width=int(evt.get("cols", 80)),
+                        )
+                except Exception:
+                    # Bad resize payload / closed exec — ignore silently.
+                    pass
+    finally:
+        stop.set()
+        reader_task.cancel()
+        try:
+            await reader_task
+        except asyncio.CancelledError:
+            pass
+        try:
+            getattr(sock, "_sock", sock).close()
+        except Exception:
+            pass
+
+
 @router.websocket("/{node_id}/ws")
 async def console_ws(node_id: str, ws: WebSocket):
     await ws.accept()
+
+    # Look up the node type so we can dispatch. For an unknown / missing
+    # node we still send a clean error rather than crashing the handler.
+    node_type = ""
     async for db in get_db():
         async with db.execute(
-            "SELECT console_type FROM nodes WHERE id = ?", (node_id,)
+            "SELECT type, console_type FROM nodes WHERE id = ?", (node_id,)
         ) as cur:
-            await cur.fetchone()
+            row = await cur.fetchone()
+        if row:
+            node_type = (row["type"] or "").lower()
+
+    if node_type == "docker":
+        await _docker_console_loop(node_id, ws)
+        return
+
+    # ----- legacy PTY path (host shell — kept for existing 'pty' nodes) -----
     proc = _sessions.get(node_id)
     if proc is None or not proc.isalive():
         shell = os.environ.get("SHELL", "/bin/bash")
