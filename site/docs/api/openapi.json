@@ -1477,6 +1477,23 @@
         }
       }
     },
+    "/api/system/email-health": {
+      "get": {
+        "summary": "Email Health",
+        "description": "Provider state for transactional email (Module 8).",
+        "operationId": "email_health_api_system_email_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/console/{node_id}/info": {
       "get": {
         "summary": "Console Info",

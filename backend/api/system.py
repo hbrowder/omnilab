@@ -151,3 +151,14 @@ async def first_run_complete(payload: FirstRunComplete):
         "telemetry": payload.telemetry,
         "license": license_result,
     }
+
+
+# CRE-13: email health probe (so the UI / ops can see provider state at a glance)
+@router.get("/email-health")
+async def email_health():
+    """Provider state for transactional email (Module 8)."""
+    try:
+        from api.email import health
+        return health()
+    except ImportError:
+        return {"provider": "unavailable", "error": "api.email not importable"}

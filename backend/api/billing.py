@@ -26,8 +26,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime
-from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -81,49 +79,36 @@ if STRIPE_AVAILABLE and STRIPE_SECRET_KEY:
 
 
 # ---------------------------------------------------------------------------
-# Email stubs (CRE-13 will replace these)
+# Email senders (CRE-13 / Module 8)
 # ---------------------------------------------------------------------------
-EMAIL_LOG = Path.home() / "netlab" / "backend" / "billing_emails.log"
-
-
-def _log_email(template: str, recipient: str, context: dict) -> None:
-    """TODO(CRE-13): Replace this with the Postmark sender from Module 8.
-
-    Today: append a JSON line to billing_emails.log so we can confirm the
-    webhook fired and the right template would have been sent. CRE-13's
-    sender wiring should swap these two stub functions for real send calls.
-    """
-    entry = {
-        "ts": datetime.utcnow().isoformat() + "Z",
-        "template": template,
-        "to": recipient,
-        "context": context,
-    }
-    try:
-        EMAIL_LOG.parent.mkdir(parents=True, exist_ok=True)
-        with EMAIL_LOG.open("a") as f:
-            f.write(json.dumps(entry) + "\n")
-    except Exception as exc:  # pragma: no cover - logging-only
-        logger.warning("Failed to write email log: %s", exc)
-    logger.info("[email-stub] would send %s to %s", template, recipient)
+# Replace the old log-only stubs with the real sender module. The new module
+# still degrades to log-mode when POSTMARK_TOKEN is unset, so dev behavior is
+# unchanged — but a real Postmark token flips it to live sending with no code
+# change here.
+try:
+    from api.email import (
+        send_license_delivery as _send_license_delivery,
+    )
+    from api.email import (
+        send_payment_failed as _send_payment_failed,
+    )
+    EMAIL_AVAILABLE = True
+except ImportError:  # pragma: no cover — the module is in-tree
+    _send_license_delivery = None
+    _send_payment_failed = None
+    EMAIL_AVAILABLE = False
 
 
 def send_license_email(recipient: str, license_key: str, plan: str) -> None:
-    """TODO(CRE-13): wire to emails/01_license_delivery.html via Postmark."""
-    _log_email(
-        "01_license_delivery",
-        recipient,
-        {"license_key": license_key, "plan": plan},
-    )
+    """Replaced by CRE-13 — delegates to api.email."""
+    if EMAIL_AVAILABLE and _send_license_delivery:
+        _send_license_delivery(recipient, license_key, plan)
 
 
 def send_payment_failed_email(recipient: str, customer_id: str) -> None:
-    """TODO(CRE-13): wire to emails/04_payment_failed.html via Postmark."""
-    _log_email(
-        "04_payment_failed",
-        recipient,
-        {"customer_id": customer_id, "grace_period_days": 7},
-    )
+    """Replaced by CRE-13 — delegates to api.email."""
+    if EMAIL_AVAILABLE and _send_payment_failed:
+        _send_payment_failed(recipient, customer_id)
 
 
 # ---------------------------------------------------------------------------
