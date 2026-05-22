@@ -1,0 +1,27 @@
+[Unit]
+Description=OmniLab - Open Multi-Node Infrastructure Lab
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=omnilab
+Group=omnilab
+WorkingDirectory=/opt/omnilab/backend
+Environment="PATH=/opt/omnilab/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONPATH=/opt/omnilab/backend"
+ExecStart=/opt/omnilab/venv/bin/python /opt/omnilab/backend/main.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/omnilab/data /var/log/omnilab /tmp
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

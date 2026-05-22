@@ -1,0 +1,35 @@
+# OmniLab backend runtime dependencies
+# Pinned to known-good versions from the dev environment as of 2026-05.
+# Updated via: pip-compile or manual edit; bump cautiously and re-test.
+
+aiosqlite==0.22.1
+fastapi==0.136.1
+uvicorn==0.47.0
+starlette==1.0.0
+pydantic==2.13.4
+pydantic_core==2.46.4
+
+# HTTP
+httpx==0.28.1
+requests==2.34.2
+
+# Forms / uploads
+python-multipart==0.0.28
+
+# Crypto (license HMAC, signing)
+cryptography==48.0.0
+jwcrypto==1.5.7
+
+# Integrations
+docker==7.1.0
+stripe==15.1.0
+redis==7.4.0
+
+# System metrics (health API)
+psutil==7.2.2
+
+# VNC proxy (console module)
+websockify==0.13.0
+websockets==16.0
+novnc==1.3.0
+numpy==2.2.6

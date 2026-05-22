@@ -1,0 +1,14 @@
+#!/bin/bash
+# OmniLab CLI wrapper — installed to /usr/local/bin/omnilab
+set -euo pipefail
+
+case "${1:-}" in
+    start)   sudo systemctl start omnilab ;;
+    stop)    sudo systemctl stop omnilab ;;
+    restart) sudo systemctl restart omnilab ;;
+    status)  sudo systemctl status omnilab ;;
+    logs)    sudo journalctl -u omnilab -f ;;
+    url)     echo "http://$(hostname -I | awk '{print $1}'):5000" ;;
+    version) cat /opt/omnilab/VERSION 2>/dev/null || echo "unknown" ;;
+    *)       echo "Usage: omnilab {start|stop|restart|status|logs|url|version}" ;;
+esac
