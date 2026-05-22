@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Upgrade to OmniLab Pro — every node, every stack, one lab." />
+<title>OmniLab Pro Checkout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+  :root {
+    --bg:           #0a0e27;
+    --bg-elev:      #0f1530;
+    --bg-elev-2:    #131a3a;
+    --border:       #1f2847;
+    --border-bold:  #2a3358;
+    --text:         #e6ebff;
+    --text-dim:     #8b94c2;
+    --text-faint:   #5d6694;
+    --accent:       #4dabf7;
+    --accent-dim:   #2d7bc0;
+    --accent-glow:  rgba(77, 171, 247, 0.18);
+    --success:      #51cf66;
+    --warn:         #ffd43b;
+    --danger:       #ff6b6b;
+    --shadow-lg:    0 24px 60px -12px rgba(0, 0, 0, 0.55);
+    --shadow-md:    0 12px 30px -8px rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', -apple-system, system-ui, sans-serif;
+    font-feature-settings: "ss01", "ss02", "cv11";
+    line-height: 1.5;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -20%, var(--accent-glow), transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(99, 102, 241, 0.08), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 48px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent) 0%, #6366f1 100%);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 0 24px var(--accent-glow);
+  }
+  .brand-mark svg { width: 22px; height: 22px; }
+  .brand-name {
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.02em;
+  }
+  .secure-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-elev);
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .secure-badge svg { width: 14px; height: 14px; color: var(--success); }
+
+  /* Layout */
+  .page-title {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin: 0 0 8px;
+  }
+  .page-sub {
+    color: var(--text-dim);
+    font-size: 16px;
+    margin: 0 0 36px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 40px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  /* Card primitive */
+  .card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: var(--shadow-md);
+  }
+  .card + .card { margin-top: 20px; }
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 18px;
+  }
+
+  /* Plan toggle */
+  .plan-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .plan-option {
+    cursor: pointer;
+    padding: 18px 18px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-elev-2);
+    transition: border-color .15s, transform .15s, box-shadow .15s;
+    position: relative;
+  }
+  .plan-option:hover { border-color: var(--border-bold); }
+  .plan-option.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+  }
+  .plan-option-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .plan-option-label {
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .plan-option-price {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .plan-option-meta {
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .save-badge {
+    position: absolute;
+    top: -10px;
+    right: 14px;
+    background: var(--success);
+    color: #0a0e27;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+  }
+
+  /* Form */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .form-row.single { grid-template-columns: 1fr; }
+  .form-row + .form-row { margin-top: 14px; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field label {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  .field input {
+    background: var(--bg-elev-2);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .field input::placeholder { color: var(--text-faint); }
+  .field input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+  }
+  .field-card {
+    position: relative;
+  }
+  .card-brand-chips {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 5px;
+    pointer-events: none;
+  }
+  .chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 4px 6px;
+    border-radius: 5px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-faint);
+    letter-spacing: 0.04em;
+  }
+
+  /* Promo + submit */
+  .promo {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .promo input {
+    flex: 1;
+    background: var(--bg-elev-2);
+    border: 1.5px dashed var(--border);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+  }
+  .promo input::placeholder { color: var(--text-faint); font-family: 'Manrope', sans-serif; text-transform: none; }
+  .promo button {
+    background: transparent;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 0 18px;
+    color: var(--text-dim);
+    font: inherit;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .promo button:hover { border-color: var(--accent); color: var(--accent); }
+  .promo-status {
+    margin-top: 10px;
+    font-size: 13px;
+    min-height: 18px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .promo-status.ok { color: var(--success); }
+  .promo-status.err { color: var(--danger); }
+
+  /* Submit */
+  .submit {
+    width: 100%;
+    margin-top: 26px;
+    background: linear-gradient(135deg, var(--accent) 0%, #6366f1 100%);
+    color: #0a0e27;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font: inherit;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: transform .12s, box-shadow .15s;
+    box-shadow: 0 8px 24px -6px rgba(77, 171, 247, 0.5);
+  }
+  .submit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 32px -8px rgba(77, 171, 247, 0.7);
+  }
+  .submit:active { transform: translateY(0); }
+  .submit:disabled {
+    opacity: 0.5;
+    cursor: wait;
+    transform: none;
+  }
+
+  /* Order summary */
+  .summary {
+    position: sticky;
+    top: 24px;
+  }
+  .summary-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    font-size: 15px;
+  }
+  .summary-line + .summary-line { border-top: 1px solid var(--border); }
+  .summary-line.muted { color: var(--text-dim); font-size: 13px; }
+  .summary-line.total {
+    font-weight: 800;
+    font-size: 18px;
+    padding-top: 18px;
+    border-top: 1.5px solid var(--border-bold);
+    margin-top: 6px;
+  }
+  .summary-line.discount { color: var(--success); }
+  .summary-line .mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .guarantee {
+    margin-top: 22px;
+    padding: 14px;
+    background: var(--bg-elev-2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .guarantee svg { width: 16px; height: 16px; color: var(--success); flex-shrink: 0; margin-top: 2px; }
+
+  /* Features list */
+  .pro-features { list-style: none; padding: 0; margin: 18px 0 0; }
+  .pro-features li {
+    padding: 7px 0;
+    color: var(--text-dim);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .pro-features li::before {
+    content: '✓';
+    color: var(--success);
+    font-weight: 800;
+    font-size: 13px;
+  }
+
+  /* Footer */
+  .powered {
+    text-align: center;
+    margin-top: 36px;
+    color: var(--text-faint);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .powered strong { color: var(--text-dim); }
+
+  /* Modal */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 14, 39, 0.85);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 24px;
+  }
+  .modal.active { display: flex; }
+  .modal-body {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 36px;
+    max-width: 460px;
+    width: 100%;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+  }
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border-bold);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .modal-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .modal-sub {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <a href="/" class="brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 7L12 3L20 7M4 7V17L12 21M4 7L12 11M20 7V17L12 21M20 7L12 11M12 11V21" stroke="#0a0e27" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-name">OmniLab</span>
+    </a>
+    <div class="secure-badge">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M9 12L11 14L15 10M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Secure checkout
+    </div>
+  </header>
+
+  <h1 class="page-title">Upgrade to Pro</h1>
+  <p class="page-sub">Unlimited nodes. Unlimited labs. Every template. One license.</p>
+
+  <div class="grid">
+
+    <!-- LEFT: form -->
+    <div>
+
+      <!-- Plan selection -->
+      <div class="card">
+        <p class="card-title">Choose your plan</p>
+        <div class="plan-toggle" role="radiogroup" aria-label="Billing plan">
+          <div class="plan-option" data-plan="monthly" role="radio" tabindex="0" aria-checked="false">
+            <div class="plan-option-head">
+              <span class="plan-option-label">Monthly</span>
+              <span class="plan-option-price">$12<span style="font-size:12px;color:var(--text-faint);">/mo</span></span>
+            </div>
+            <div class="plan-option-meta">Billed monthly. Cancel anytime.</div>
+          </div>
+          <div class="plan-option active" data-plan="yearly" role="radio" tabindex="0" aria-checked="true">
+            <span class="save-badge">SAVE 20%</span>
+            <div class="plan-option-head">
+              <span class="plan-option-label">Yearly</span>
+              <span class="plan-option-price">$99<span style="font-size:12px;color:var(--text-faint);">/yr</span></span>
+            </div>
+            <div class="plan-option-meta">Equivalent to $8.25/mo. Best value.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer info -->
+      <div class="card">
+        <p class="card-title">Your information</p>
+        <div class="form-row single">
+          <div class="field">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="you@company.com" required autocomplete="email" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="name">Full name</label>
+            <input type="text" id="name" name="name" placeholder="Harold Browder" autocomplete="name" />
+          </div>
+          <div class="field">
+            <label for="company">Company (optional)</label>
+            <input type="text" id="company" name="company" placeholder="OmniLab Inc." autocomplete="organization" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment -->
+      <div class="card">
+        <p class="card-title">Payment</p>
+        <p style="color:var(--text-dim);font-size:13px;margin:-8px 0 16px;">You'll enter card details securely on the next screen, hosted by Stripe.</p>
+        <div class="form-row single">
+          <div class="field field-card">
+            <label for="card">Card number (preview only — entered on Stripe)</label>
+            <input type="text" id="card" name="card" placeholder="•••• •••• •••• ••••" inputmode="numeric" autocomplete="off" />
+            <div class="card-brand-chips">
+              <span class="chip">VISA</span>
+              <span class="chip">MC</span>
+              <span class="chip">AMEX</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="expiry">Expiry</label>
+            <input type="text" id="expiry" name="expiry" placeholder="MM/YY" maxlength="5" inputmode="numeric" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="cvc">CVC</label>
+            <input type="text" id="cvc" name="cvc" placeholder="•••" maxlength="4" inputmode="numeric" autocomplete="off" />
+          </div>
+        </div>
+
+        <div class="promo">
+          <input type="text" id="promo" name="promo" placeholder="Promo code (e.g. LAUNCH50)" autocomplete="off" />
+          <button type="button" id="applyPromo">Apply</button>
+        </div>
+        <div class="promo-status" id="promoStatus" role="status" aria-live="polite"></div>
+
+        <button class="submit" id="submitBtn" type="button">Continue to secure payment →</button>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: summary -->
+    <aside>
+      <div class="card summary">
+        <p class="card-title">Order summary</p>
+        <div class="summary-line">
+          <span>OmniLab Pro</span>
+          <span class="mono" id="planLine">Yearly</span>
+        </div>
+        <div class="summary-line muted">
+          <span id="planMeta">$99.00 billed annually</span>
+          <span></span>
+        </div>
+        <div class="summary-line">
+          <span>Subtotal</span>
+          <span class="mono" id="subtotal">$99.00</span>
+        </div>
+        <div class="summary-line discount" id="discountLine" style="display:none;">
+          <span id="discountLabel">Promo</span>
+          <span class="mono" id="discountAmount">-$0.00</span>
+        </div>
+        <div class="summary-line muted">
+          <span>Tax</span>
+          <span class="mono">Calculated at next step</span>
+        </div>
+        <div class="summary-line total">
+          <span>Total today</span>
+          <span class="mono" id="total">$99.00</span>
+        </div>
+
+        <ul class="pro-features">
+          <li>Unlimited nodes &amp; labs</li>
+          <li>All 50+ vendor templates</li>
+          <li>Security, DevOps, AI/ML labs</li>
+          <li>Priority email support</li>
+          <li>Free updates for 1 year</li>
+        </ul>
+
+        <div class="guarantee">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M9 12L11 14L15 10M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>30-day money-back guarantee. No questions asked.</span>
+        </div>
+      </div>
+
+      <p class="powered">
+        Powered by <strong>Stripe</strong> · Your card details never touch our servers
+      </p>
+    </aside>
+
+  </div>
+</div>
+
+<!-- Loading modal -->
+<div class="modal" id="loadingModal" role="dialog" aria-modal="true" aria-labelledby="loadingTitle">
+  <div class="modal-body">
+    <div class="spinner" aria-hidden="true"></div>
+    <p class="modal-title" id="loadingTitle">Redirecting to Stripe…</p>
+    <p class="modal-sub">One moment while we open a secure checkout session.</p>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+ * State + pricing
+ * ============================================================ */
+const PRICING = {
+  monthly: { amount: 12.00, label: 'Monthly', meta: '$12.00 billed monthly' },
+  yearly:  { amount: 99.00, label: 'Yearly',  meta: '$99.00 billed annually' },
+};
+
+const PROMO_CODES = {
+  LAUNCH50: { pct: 50, label: 'LAUNCH50 (50% off)' },
+  BETA20:   { pct: 20, label: 'BETA20 (20% off)'   },
+};
+
+let selectedPlan = 'yearly';
+let activePromo = null;
+
+/* ============================================================
+ * Plan toggle
+ * ============================================================ */
+const planOptions = document.querySelectorAll('.plan-option');
+planOptions.forEach(opt => {
+  const select = () => {
+    planOptions.forEach(o => {
+      o.classList.remove('active');
+      o.setAttribute('aria-checked', 'false');
+    });
+    opt.classList.add('active');
+    opt.setAttribute('aria-checked', 'true');
+    selectedPlan = opt.dataset.plan;
+    updateSummary();
+  };
+  opt.addEventListener('click', select);
+  opt.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(); }
+  });
+});
+
+/* ============================================================
+ * Card input auto-format (cosmetic — real entry on Stripe)
+ * ============================================================ */
+const cardInput = document.getElementById('card');
+cardInput.addEventListener('input', (e) => {
+  let v = e.target.value.replace(/\s+/g, '').replace(/\D/g, '');
+  v = v.substring(0, 16);
+  const parts = v.match(/.{1,4}/g);
+  e.target.value = parts ? parts.join(' ') : '';
+});
+
+const expiryInput = document.getElementById('expiry');
+expiryInput.addEventListener('input', (e) => {
+  let v = e.target.value.replace(/\D/g, '').substring(0, 4);
+  if (v.length >= 3) v = v.substring(0, 2) + '/' + v.substring(2);
+  e.target.value = v;
+});
+
+const cvcInput = document.getElementById('cvc');
+cvcInput.addEventListener('input', (e) => {
+  e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
+});
+
+/* ============================================================
+ * Promo code apply
+ * ============================================================ */
+const promoInput = document.getElementById('promo');
+const promoBtn = document.getElementById('applyPromo');
+const promoStatus = document.getElementById('promoStatus');
+
+promoBtn.addEventListener('click', () => {
+  const code = promoInput.value.trim().toUpperCase();
+  if (!code) {
+    promoStatus.textContent = '';
+    promoStatus.className = 'promo-status';
+    activePromo = null;
+    updateSummary();
+    return;
+  }
+  const match = PROMO_CODES[code];
+  if (match) {
+    activePromo = { code, ...match };
+    promoStatus.textContent = '✓ ' + match.label + ' applied';
+    promoStatus.className = 'promo-status ok';
+  } else {
+    activePromo = null;
+    promoStatus.textContent = '✗ Code "' + code + '" not recognized';
+    promoStatus.className = 'promo-status err';
+  }
+  updateSummary();
+});
+
+/* ============================================================
+ * Summary rendering
+ * ============================================================ */
+function fmt(amount) { return '$' + amount.toFixed(2); }
+
+function updateSummary() {
+  const plan = PRICING[selectedPlan];
+  document.getElementById('planLine').textContent = plan.label;
+  document.getElementById('planMeta').textContent = plan.meta;
+  document.getElementById('subtotal').textContent = fmt(plan.amount);
+
+  const discountLine = document.getElementById('discountLine');
+  const discountLabel = document.getElementById('discountLabel');
+  const discountAmount = document.getElementById('discountAmount');
+
+  let total = plan.amount;
+  if (activePromo) {
+    const off = +(plan.amount * activePromo.pct / 100).toFixed(2);
+    total = +(plan.amount - off).toFixed(2);
+    discountLine.style.display = 'flex';
+    discountLabel.textContent = activePromo.code + ' (-' + activePromo.pct + '%)';
+    discountAmount.textContent = '-' + fmt(off);
+  } else {
+    discountLine.style.display = 'none';
+  }
+
+  document.getElementById('total').textContent = fmt(total);
+}
+
+/* ============================================================
+ * Submit → real Stripe Checkout via /api/billing/create-checkout-session
+ *
+ * CRE-21: This is the real wiring. Calls the FastAPI backend at
+ *         /api/billing/create-checkout-session, receives a Stripe-hosted
+ *         Checkout URL, and redirects.
+ *
+ * Behavior while STRIPE_SECRET_KEY is not set:
+ *   - Backend returns 503 with a descriptive `detail` field
+ *   - We surface that message to the user (visible alert + console)
+ *   - The form does NOT charge anything
+ * ============================================================ */
+async function handleSubmit(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const email = document.getElementById('email').value.trim();
+  if (!email) {
+    alert('Please enter your email address.');
+    document.getElementById('email').focus();
+    return;
+  }
+
+  const submitBtn = document.getElementById('submitBtn');
+  const loadingModal = document.getElementById('loadingModal');
+  submitBtn.disabled = true;
+  loadingModal.classList.add('active');
+
+  try {
+    const resp = await fetch('/api/billing/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plan: selectedPlan,
+        customer_email: email,
+        promo_code: activePromo ? activePromo.code : null,
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || ('HTTP ' + resp.status));
+    }
+
+    const data = await resp.json();
+    if (!data.url) throw new Error('No checkout URL returned by the backend.');
+
+    // Redirect to Stripe-hosted Checkout. On success Stripe sends the user
+    // to STRIPE_SUCCESS_URL; on cancel, to STRIPE_CANCEL_URL.
+    window.location.href = data.url;
+  } catch (err) {
+    loadingModal.classList.remove('active');
+    submitBtn.disabled = false;
+
+    const msg = err.message || String(err);
+    let userMsg = 'Checkout could not start:\n\n' + msg;
+    if (msg.includes('STRIPE_SECRET_KEY') || msg.includes('STRIPE_PRICE')) {
+      userMsg += '\n\n(The Stripe account is not yet wired. This form will work as soon as the real keys are added to .env on the backend.)';
+    }
+    alert(userMsg);
+    console.error('CRE-21 checkout error:', err);
+  }
+}
+
+document.getElementById('submitBtn').addEventListener('click', handleSubmit);
+
+/* Init */
+updateSummary();
+</script>
+
+</body>
+</html>

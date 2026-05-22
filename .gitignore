@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Backups / scratch
+*.bak
+*.bak_*
+*.swp
+*.swo
+*~
+
+# Local data / secrets
+.env
+.env.local
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+backend/.license_secret
+backend/.license.json
+backend/.updates_state.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+
+# Logs
+*.log

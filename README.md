@@ -1,0 +1,77 @@
+# OmniLab
+
+> A self-hostable network lab platform — design topologies in the browser,
+> deploy them to real KVM/QEMU VMs, and manage everything from a single REST
+> API.
+
+Status: pre-launch, v1.0 in active development. Tracking board:
+[Linear → Creator Buddy / OmniLab v1.0](https://linear.app/harold-browder/team/CRE).
+
+---
+
+## Tech stack
+
+| Layer        | Tech                                                                  |
+| ------------ | --------------------------------------------------------------------- |
+| Backend      | Python 3, FastAPI, Uvicorn, SQLite (aiosqlite), httpx                 |
+| Frontend     | React 18, Vite 5, Zustand, React Router, ReactFlow, Three.js, xterm.js|
+| Virt         | KVM / QEMU                                                            |
+| Remote view  | Apache Guacamole (mounted under `/guacamole/*` via reverse proxy)     |
+| Distribution | `.deb` installer, CLI, auto-update checker                            |
+| Billing      | Stripe Checkout                                                       |
+
+---
+
+## Repository layout
+
+```
+netlab/
+├── backend/        FastAPI app — main.py + api/*.py routers, core/, services/
+├── frontend/       Vite + React SPA — src/, dist/ (built bundle served by FastAPI)
+├── docs/           Operator + developer docs
+└── README.md       (this file)
+```
+
+Runtime data lives outside the repo at `~/.omnilab/` (database, snapshots, lab
+state, VM images).
+
+---
+
+## Running locally
+
+```bash
+# Backend (Python venv lives at ~/netlab-env)
+source ~/netlab-env/bin/activate
+cd backend
+python main.py                 # listens on :5000
+
+# Or use the supervised loop:
+~/start-omnilab.sh             # while-true respawn
+
+# Frontend (dev mode with HMR)
+cd frontend
+npm install
+npm run dev                    # listens on :5173
+```
+
+Health check: `curl http://localhost:5000/api/system/health`
+
+---
+
+## Development workflow
+
+See [docs/CLAUDE_TOOLING.md](docs/CLAUDE_TOOLING.md) for the canonical
+session-start runbook (WeTTY + Claude Desktop Cowork) and the list of pitfalls
+to avoid (FastAPI catch-all ordering, heredoc/JSX gotchas, backend respawn
+behavior, etc.).
+
+All work is tracked in Linear under the **CRE** team. Issues are assigned to
+the engineer driving them and moved through `Backlog → Todo → In Progress →
+Done`.
+
+---
+
+## License
+
+Proprietary — © Harold Browder. All rights reserved (pending public license
+decision before v1.0 launch).

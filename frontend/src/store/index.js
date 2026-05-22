@@ -1,0 +1,29 @@
+import { create } from 'zustand'
+export const useStore = create((set) => ({
+  labs: [], activeLab: null, nodes: [], links: [], templates: [],
+  categories: [], systemInfo: null, selectedNode: null,
+  setLabs: (labs) => set({ labs }),
+  removeLab: (id) => {
+    set((s) => ({ labs: (Array.isArray(s.labs) ? s.labs : []).filter(l => l.id !== id) }))
+    try {
+      const raw = localStorage.getItem('omnilab_folders')
+      if (raw) {
+        const data = JSON.parse(raw)
+        if (data && Array.isArray(data.folders)) {
+          data.folders.forEach(f => {
+            if (Array.isArray(f.labIds)) f.labIds = f.labIds.filter(x => x !== id)
+          })
+          localStorage.setItem('omnilab_folders', JSON.stringify(data))
+        }
+      }
+    } catch (e) { /* ignore */ }
+  },
+  setActiveLab: (lab) => set({ activeLab: lab }),
+  setTopology: ({ nodes, links }) => set({ nodes, links }),
+  setTemplates: (t) => set({ templates: t }),
+  setCategories: (c) => set({ categories: c }),
+  setSystemInfo: (i) => set({ systemInfo: i }),
+  setSelectedNode: (n) => set({ selectedNode: n }),
+  addNode: (n) => set((s) => ({ nodes: [...s.nodes, n] })),
+  removeNode: (id) => set((s) => ({ nodes: s.nodes.filter(n=>n.id!==id), links: s.links.filter(l=>l.src_node_id!==id&&l.dst_node_id!==id) })),
+}))
