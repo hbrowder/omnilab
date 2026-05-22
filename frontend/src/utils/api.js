@@ -18,4 +18,8 @@ export const getSystemInfo = () => api.get('/system/info')
 export const updateNodeConfig = (id, data) => api.patch('/nodes/'+id, data)
 export const updateNodeMeta = (id, data) => api.patch('/nodes/'+id, data)
 
+// CRE-15 / CRE-16 — first-run wizard
+export const getFirstRunStatus = () => api.get('/system/first-run')
+export const completeFirstRun = (data) => api.post('/system/first-run/complete', data)
+
 export default api
