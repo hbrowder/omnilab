@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "product": "OmniLab",
+  "lab": {
+    "name": "Empty Canvas",
+    "description": "Empty lab for CRE-26 video beat 4 (drag-and-drop demo). No nodes, no links — pure canvas.",
+    "category": "general"
+  },
+  "nodes": [],
+  "links": []
+}

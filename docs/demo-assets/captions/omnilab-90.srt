@@ -1,0 +1,35 @@
+1
+00:00:01,000 --> 00:00:06,000
+A real network lab. Running in your browser. Right now.
+
+2
+00:00:06,000 --> 00:00:12,000
+OmniLab — self-hosted lab platform for networking, security, DevOps, and AI/ML.
+
+3
+00:00:12,000 --> 00:00:24,000
+Every node is a real VM. SSH, root, kernel, the works — directly in your browser.
+
+4
+00:00:25,000 --> 00:00:31,000
+Drag, drop, deploy.
+
+5
+00:00:32,000 --> 00:00:38,000
+Backed by real KVM/QEMU. No Docker shortcuts, no toys.
+
+6
+00:00:38,000 --> 00:00:50,000
+Or skip the UI entirely. Full CLI. Full API. Your call.
+
+7
+00:00:50,000 --> 00:01:06,000
+Networking. Security. DevOps. AI/ML. Real workloads. Real protocols.
+
+8
+00:01:06,000 --> 00:01:14,000
+Self-hosted. Ubuntu, Debian, RHEL. 90 seconds to running.
+
+9
+00:01:14,000 --> 00:01:24,000
+Free for personal use. Pro tier $12/mo. Star the repo.

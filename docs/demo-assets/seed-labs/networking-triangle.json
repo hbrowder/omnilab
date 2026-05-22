@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "product": "OmniLab",
+  "lab": {
+    "name": "Networking Triangle",
+    "description": "3-router topology for CRE-26 video beat 6 ('what else' reel). Cisco + Juniper + VyOS in a triangle with OSPF between them.",
+    "category": "networking"
+  },
+  "nodes": [
+    {
+      "name": "r1-cisco",
+      "type": "router",
+      "image": "cisco-iosv",
+      "x": 360,
+      "y": 140,
+      "config": "{\"vendor\": \"cisco\", \"protocol\": \"ospf\", \"area\": \"0.0.0.0\"}"
+    },
+    {
+      "name": "r2-juniper",
+      "type": "router",
+      "image": "juniper-vmx",
+      "x": 640,
+      "y": 140,
+      "config": "{\"vendor\": \"juniper\", \"protocol\": \"ospf\", \"area\": \"0.0.0.0\"}"
+    },
+    {
+      "name": "r3-vyos",
+      "type": "router",
+      "image": "vyos-1.4",
+      "x": 500,
+      "y": 420,
+      "config": "{\"vendor\": \"vyos\", \"protocol\": \"ospf\", \"area\": \"0.0.0.0\"}"
+    }
+  ],
+  "links": [
+    {"src_name": "r1-cisco", "dst_name": "r2-juniper"},
+    {"src_name": "r2-juniper", "dst_name": "r3-vyos"},
+    {"src_name": "r3-vyos", "dst_name": "r1-cisco"}
+  ]
+}

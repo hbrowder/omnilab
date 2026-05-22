@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "product": "OmniLab",
+  "lab": {
+    "name": "Security Stack",
+    "description": "Demo lab for CRE-26 video. SIEM (Wazuh) + IDS (Suricata) + attacker (Kali) on a single OVS bridge. Pre-positioned for beat 1 (cold open) and beat 3 (node console).",
+    "category": "security"
+  },
+  "nodes": [
+    {
+      "name": "kali-1",
+      "type": "linux",
+      "image": "kali-rolling",
+      "x": 240,
+      "y": 160,
+      "config": "{\"cpus\": 2, \"memory_mb\": 2048, \"role\": \"attacker\"}"
+    },
+    {
+      "name": "wazuh-1",
+      "type": "linux",
+      "image": "ubuntu-22.04",
+      "x": 720,
+      "y": 160,
+      "config": "{\"cpus\": 2, \"memory_mb\": 4096, \"role\": \"siem\", \"services\": [\"wazuh-manager\", \"wazuh-indexer\", \"wazuh-dashboard\"]}"
+    },
+    {
+      "name": "suricata-1",
+      "type": "linux",
+      "image": "ubuntu-22.04",
+      "x": 480,
+      "y": 440,
+      "config": "{\"cpus\": 2, \"memory_mb\": 2048, \"role\": \"ids\", \"services\": [\"suricata\"]}"
+    }
+  ],
+  "links": [
+    {"src_name": "kali-1", "dst_name": "suricata-1"},
+    {"src_name": "wazuh-1", "dst_name": "suricata-1"},
+    {"src_name": "kali-1", "dst_name": "wazuh-1"}
+  ]
+}
