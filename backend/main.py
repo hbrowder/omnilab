@@ -29,6 +29,28 @@ logger = logging.getLogger("omnilab")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    # CRE-39 phase 4: surface docker socket reachability at startup. We don't
+    # FAIL the boot on missing docker — the app still works for QEMU/PTY/VNC
+    # nodes — but we log a loud, actionable hint so the user knows why
+    # docker-typed nodes will 503 later.
+    try:
+        from services.docker_provisioner import (
+            DockerProvisioner,
+            DockerProvisionerError,
+        )
+        try:
+            DockerProvisioner()
+            logger.info("Docker daemon reachable — docker templates available.")
+        except DockerProvisionerError as exc:
+            logger.warning(
+                "Docker daemon unreachable: %s "
+                "Docker-typed nodes will 503 until this is fixed. "
+                "If running as a non-root user, add yourself to the 'docker' "
+                "group (sudo usermod -aG docker $USER && newgrp docker).",
+                exc,
+            )
+    except Exception as exc:  # noqa: BLE001 — never let the docker check kill the app
+        logger.warning("Docker reachability check skipped (%s)", exc)
     logger.info("OmniLab running!")
     yield
 
