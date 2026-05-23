@@ -58,6 +58,27 @@ Health check: `curl http://localhost:5000/api/system/health`
 
 ---
 
+## Lab templates
+
+OmniLab ships with 10 pre-configured "golden lab" templates that one-click
+deploy into a working topology (Docker-backed nodes today, KVM-backed nodes
+coming in v1.1). The full ledger of templates and their current status —
+plus the smoke-test harness used to verify them — lives in
+[docs/TEMPLATES.md](docs/TEMPLATES.md).
+
+To verify all templates end-to-end against the live docker daemon:
+
+```bash
+~/netlab-env/bin/python ~/netlab/scripts/smoke_test_templates.py
+```
+
+This deploys each template, starts every node, verifies the containers are
+actually running (not "exited-after-init"), hits the web-UI reverse proxy
+for nodes that expose one, and cleans up between templates. Results land at
+`/tmp/smoke_test_results.json`.
+
+---
+
 ## Development workflow
 
 See [docs/CLAUDE_TOOLING.md](docs/CLAUDE_TOOLING.md) for the canonical
