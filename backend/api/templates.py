@@ -96,8 +96,8 @@ TEMPLATES = {
         "id": "pentest-lab",
         "name": "Pentest Lab",
         "category": "security",
-        "description": "Kali Linux attacker against Metasploitable2 — the"
-        " classic intro pentest lab. nmap, msfconsole, exploit, root.",
+        "description": "Kali Linux attacker (with nmap, nc, hydra pre-installed) "
+        "against a vulnerable target. The classic intro pentest lab: scan, exploit, root.",
         "difficulty": "beginner",
         "tags": ["pentest", "kali", "metasploit", "red-team"],
         "nodes": [
@@ -112,18 +112,37 @@ TEMPLATES = {
                     # raw-socket exploits. NOT privileged=True — we don't
                     # need full host access.
                     "cap_add": ["NET_ADMIN", "NET_RAW"],
-                    "command": ["sleep", "infinity"],
+                    # kali-rolling is the slim variant — base image has no
+                    # security tools. Install the essentials on first boot
+                    # then sleep. The install is cached as a docker layer
+                    # after first deploy if we ever build a derived image;
+                    # for v1.0 we accept the ~45s install on first start.
+                    "command": [
+                        "bash", "-c",
+                        "DEBIAN_FRONTEND=noninteractive apt-get update -qq && "
+                        "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "
+                        "nmap netcat-traditional iputils-ping hydra curl wget "
+                        "dnsutils python3 git vim less >/dev/null 2>&1 || true && "
+                        "echo 'kali ready' && sleep infinity",
+                    ],
                     "tty": True,
                 },
             },
             {
                 "name": "target",
                 "type": "docker",
-                "image": "tleemcjr/metasploitable2",
+                # vulhub-style intentionally-vulnerable web app — actually stays
+                # running (unlike tleemcjr/metasploitable2 which exits after boot).
+                # DVWA is a Damn Vulnerable Web App — has SQL injection, XSS,
+                # command injection, file upload, etc. Perfect demo target:
+                # instructor can show nmap finds open port 80, curl returns
+                # vulnerable HTTP, then walk through an actual exploit.
+                "image": "vulnerables/web-dvwa",
                 "x": 400,
                 "y": 200,
-                # Metasploitable2 image runs its vulnerable services on
-                # entrypoint — no command override needed.
+                "web_port": 80,
+                # No command override — DVWA's default entrypoint (apache +
+                # mysql) keeps the container alive.
             },
         ],
         "links": [{"src": "kali", "dst": "target"}],

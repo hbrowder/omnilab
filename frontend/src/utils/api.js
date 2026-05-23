@@ -22,4 +22,18 @@ export const updateNodeMeta = (id, data) => api.patch('/nodes/'+id, data)
 export const getFirstRunStatus = () => api.get('/system/first-run')
 export const completeFirstRun = (data) => api.post('/system/first-run/complete', data)
 
+// CRE-39 — docker provisioning frontend integration
+// Note: web-info lives at /api/labs/{lab_id}/nodes/{node_id}/web-info,
+// NOT /api/nodes/{node_id}/web-info — the lab_id is in the URL so the
+// proxy can validate ownership without an extra DB hop.
+export const getNodeWebInfo = (labId, nodeId) =>
+  api.get(`/labs/${labId}/nodes/${nodeId}/web-info`)
+
+// Build a ws:// or wss:// URL relative to the current page origin. Works
+// in dev (Vite proxy at :5173 -> backend :5000) and prod (same-origin).
+export const provisionWsUrl = (nodeId) => {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${proto}//${window.location.host}/api/nodes/${nodeId}/provision-ws`
+}
+
 export default api

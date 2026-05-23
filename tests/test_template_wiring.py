@@ -27,7 +27,7 @@ from core.config import settings
 # on their default entrypoint (the container won't immediately exit).
 _LONG_RUNNING_IMAGES = {
     "wazuh/wazuh-manager:4.7.0",
-    "tleemcjr/metasploitable2",
+    "vulnerables/web-dvwa",
     "jasonish/suricata:latest",
     "zeekurity/zeek:latest",
     "strangebee/thehive:5",
@@ -197,7 +197,14 @@ def test_deploy_persists_docker_options_into_nodes_config(client, fresh_db):
     assert kali_id is not None
     cfg = _read_node_config(kali_id)
     assert cfg["docker_options"]["cap_add"] == ["NET_ADMIN", "NET_RAW"]
-    assert cfg["docker_options"]["command"] == ["sleep", "infinity"]
+    # kali-rolling is the slim variant — pentest-lab installs nmap + friends
+    # via an apt-get one-liner on first boot. Assert the shape, not the
+    # exact apt args (they'll churn).
+    cmd = cfg["docker_options"]["command"]
+    assert cmd[0] == "bash" and cmd[1] == "-c"
+    assert "apt-get install" in cmd[2]
+    assert "nmap" in cmd[2]
+    assert "sleep infinity" in cmd[2]
 
 
 def test_deploy_persists_web_port_into_nodes_config(client, fresh_db):
