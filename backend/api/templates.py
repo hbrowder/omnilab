@@ -164,6 +164,7 @@ TEMPLATES = {
                 "y": 150,
                 "docker_options": {
                     "cap_add": ["NET_ADMIN", "SYS_NICE"],
+                    "command": ["bash", "-c", "suricata-update && exec suricata -i eth0 -vvv"]
                 },
             },
             {
