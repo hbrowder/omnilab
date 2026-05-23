@@ -29,7 +29,7 @@ _LONG_RUNNING_IMAGES = {
     "wazuh/wazuh-manager:4.7.0",
     "vulnerables/web-dvwa",
     "jasonish/suricata:latest",
-    "zeekurity/zeek:latest",
+    "zeek/zeek:latest",
     "strangebee/thehive:5",
     "mitre/caldera:latest",
     "gitea/gitea:latest",
@@ -38,7 +38,7 @@ _LONG_RUNNING_IMAGES = {
     "registry:2",
     "ollama/ollama:latest",
     "ghcr.io/open-webui/open-webui:main",
-    "jupyter/datascience-notebook",
+    "jupyter/datascience-notebook:x86_64-python-3.11",
     "ghcr.io/mlflow/mlflow",
     "minio/minio",
 }

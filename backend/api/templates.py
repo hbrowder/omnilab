@@ -170,11 +170,12 @@ TEMPLATES = {
             {
                 "name": "zeek",
                 "type": "docker",
-                "image": "zeekurity/zeek:latest",
+                "image": "zeek/zeek:latest",
                 "x": 400,
                 "y": 150,
                 "docker_options": {
                     "cap_add": ["NET_ADMIN", "NET_RAW"],
+                    "command": ["sleep", "infinity"],
                 },
             },
             {
@@ -396,7 +397,7 @@ TEMPLATES = {
             {
                 "name": "jupyter",
                 "type": "docker",
-                "image": "jupyter/datascience-notebook",
+                "image": "jupyter/datascience-notebook:x86_64-python-3.11",
                 "x": 200,
                 "y": 150,
                 "web_port": 8888,
