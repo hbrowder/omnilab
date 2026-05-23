@@ -35,6 +35,7 @@ _LONG_RUNNING_IMAGES = {
     "gitea/gitea:latest",
     "jenkins/jenkins:lts",
     "goharbor/harbor-core",
+    "registry:2",
     "ollama/ollama:latest",
     "ghcr.io/open-webui/open-webui:main",
     "jupyter/datascience-notebook",

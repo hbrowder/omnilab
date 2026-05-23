@@ -296,8 +296,8 @@ TEMPLATES = {
         "id": "cicd-pipeline",
         "name": "CI/CD Pipeline",
         "category": "devops",
-        "description": "Gitea source hosting → Jenkins build server → Harbor"
-        " container registry. Full pipeline in one lab.",
+        "description": "Gitea source hosting → Jenkins build server → Docker"
+        " Registry. Full pipeline in one lab.",
         "difficulty": "intermediate",
         "tags": ["cicd", "jenkins", "gitea", "harbor"],
         "nodes": [
@@ -318,17 +318,22 @@ TEMPLATES = {
                 "web_port": 8080,
             },
             {
-                "name": "harbor",
+                "name": "registry",
                 "type": "docker",
-                "image": "goharbor/harbor-core",
+                "image": "registry:2",
                 "x": 550,
                 "y": 200,
-                "web_port": 80,
+                "web_port": 5000,
+                "docker_options": {
+                    "environment": {
+                        "REGISTRY_HTTP_ADDR": "0.0.0.0:5000"
+                    }
+                }
             },
         ],
         "links": [
             {"src": "gitea", "dst": "jenkins"},
-            {"src": "jenkins", "dst": "harbor"},
+            {"src": "jenkins", "dst": "registry"},
         ],
     },
     # ============================================================== ai-ml ===
