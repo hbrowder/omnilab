@@ -17,10 +17,10 @@ function OmniLogoFull() {
           <span style={{ fontWeight:800, fontSize:52, color:'#6b7280', letterSpacing:'12px', fontFamily:'system-ui,sans-serif', lineHeight:1 }}>LAB</span>
         </div>
         <div style={{ width:'100%', height:3, background:'#1d4ed8', borderRadius:2, marginTop:6 }}/>
-        <div style={{ marginTop:10, fontSize:11, color:'#3b82f6', letterSpacing:'3px', fontFamily:'monospace' }}>
+        <div style={{ marginTop:10, fontSize:12, color:'#58a6ff', letterSpacing:'3px', fontFamily:'monospace', fontWeight:600 }}>
           OPEN MULTI-NODE INFRASTRUCTURE LAB
         </div>
-        <div style={{ marginTop:8, fontSize:15, color:'#6b7280', fontStyle:'italic', letterSpacing:'0.5px' }}>
+        <div style={{ marginTop:8, fontSize:16, color:'#c9d1d9', fontStyle:'italic', letterSpacing:'0.5px' }}>
           Every node. Every stack. One lab.
         </div>
       </div>
@@ -198,14 +198,14 @@ export default function Login({ onLogin }) {
             </button>
           </form>
 
-          <div style={{ marginTop:20, display:'flex', justifyContent:'center', gap:16 }}>
-            {['AI/ML','Security','DevOps','Networking'].map(tag => (
-              <span key={tag} style={{ fontSize:9, color:'#30363d', letterSpacing:'1px' }}>{tag}</span>
+          <div style={{ marginTop:20, display:'flex', justifyContent:'center', gap:16, flexWrap:'wrap' }}>
+            {['Security','DevOps','Networking','Cloud','AI/ML','Training'].map(tag => (
+              <span key={tag} style={{ fontSize:10, color:'#8b949e', letterSpacing:'1px', fontWeight:500 }}>{tag}</span>
             ))}
           </div>
         </div>
 
-        <div style={{ textAlign:'center', marginTop:20, fontSize:11, color:'#30363d' }}>
+        <div style={{ textAlign:'center', marginTop:20, fontSize:11, color:'#8b949e' }}>
           © 2026 OmniLab — Open Multi-Node Infrastructure Lab
         </div>
       </div>
