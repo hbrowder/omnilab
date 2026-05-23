@@ -4,12 +4,35 @@ import React, { useState, useEffect, useRef } from 'react'
 function OmniLogoFull() {
   return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:20 }}>
-      <svg width="100" height="100" viewBox="0 0 100 100">
-        <ellipse cx="50" cy="50" rx="44" ry="16" fill="none" stroke="#1d4ed8" strokeWidth="3" transform="rotate(-25 50 50)"/>
-        <ellipse cx="50" cy="50" rx="44" ry="16" fill="none" stroke="#3b82f6" strokeWidth="3" transform="rotate(35 50 50)"/>
-        <ellipse cx="50" cy="50" rx="44" ry="16" fill="none" stroke="#93c5fd" strokeWidth="3" transform="rotate(95 50 50)"/>
-        <circle cx="50" cy="50" r="16" fill="#1d4ed8"/>
-        <text x="50" y="55" fontFamily="Arial,sans-serif" fontSize="16" fontWeight="800" fill="white" textAnchor="middle">O</text>
+      <svg width="100" height="100" viewBox="0 0 100 100" style={{ filter: 'drop-shadow(0 0 20px rgba(29, 78, 216, 0.6))' }}>
+        <defs>
+          <linearGradient id="ring1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{ stopColor: '#1d4ed8', stopOpacity: 0.8 }} />
+            <stop offset="50%" style={{ stopColor: '#3b82f6', stopOpacity: 1 }} />
+            <stop offset="100%" style={{ stopColor: '#1d4ed8', stopOpacity: 0.6 }} />
+          </linearGradient>
+          <linearGradient id="ring2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{ stopColor: '#3b82f6', stopOpacity: 0.8 }} />
+            <stop offset="50%" style={{ stopColor: '#60a5fa', stopOpacity: 1 }} />
+            <stop offset="100%" style={{ stopColor: '#3b82f6', stopOpacity: 0.6 }} />
+          </linearGradient>
+          <linearGradient id="ring3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{ stopColor: '#93c5fd', stopOpacity: 0.7 }} />
+            <stop offset="50%" style={{ stopColor: '#bfdbfe', stopOpacity: 1 }} />
+            <stop offset="100%" style={{ stopColor: '#93c5fd', stopOpacity: 0.5 }} />
+          </linearGradient>
+          <radialGradient id="sphere">
+            <stop offset="0%" style={{ stopColor: '#60a5fa', stopOpacity: 1 }} />
+            <stop offset="70%" style={{ stopColor: '#3b82f6', stopOpacity: 1 }} />
+            <stop offset="100%" style={{ stopColor: '#1d4ed8', stopOpacity: 1 }} />
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="50" rx="44" ry="16" fill="none" stroke="url(#ring1)" strokeWidth="4" transform="rotate(-25 50 50)" opacity="0.9"/>
+        <ellipse cx="50" cy="50" rx="44" ry="16" fill="none" stroke="url(#ring2)" strokeWidth="4" transform="rotate(35 50 50)" opacity="0.95"/>
+        <ellipse cx="50" cy="50" rx="44" ry="16" fill="none" stroke="url(#ring3)" strokeWidth="4" transform="rotate(95 50 50)" opacity="0.85"/>
+        <circle cx="50" cy="50" r="16" fill="url(#sphere)" filter="url(#glow)"/>
+        <circle cx="50" cy="50" r="16" fill="url(#sphere)" opacity="0.4"/>
+        <text x="50" y="55" fontFamily="Arial,sans-serif" fontSize="16" fontWeight="800" fill="white" textAnchor="middle" style={{ textShadow: '0 0 10px rgba(96, 165, 250, 0.8)' }}>O</text>
       </svg>
       <div style={{ textAlign:'center' }}>
         <div style={{ display:'flex', alignItems:'baseline', justifyContent:'center', gap:0 }}>
