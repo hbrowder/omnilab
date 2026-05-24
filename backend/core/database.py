@@ -18,6 +18,21 @@ async def init_db():
             x REAL DEFAULT 0, y REAL DEFAULT 0, console_port INTEGER,
             created_at TEXT,
             FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE CASCADE)""")
+        # Schema additions that landed via ALTER TABLE on the production install.
+        # Replayed here so a fresh DB (tests, new install) matches the live shape.
+        # Each statement is its own try/except — sqlite errors with "duplicate
+        # column name" if the column already exists, which is the upgrade path.
+        for ddl in (
+            "ALTER TABLE nodes ADD COLUMN console_type TEXT NOT NULL DEFAULT 'pty'",
+            "ALTER TABLE nodes ADD COLUMN vnc_port INTEGER",
+            "ALTER TABLE nodes ADD COLUMN rdp_host TEXT",
+            "ALTER TABLE nodes ADD COLUMN rdp_port INTEGER",
+        ):
+            try:
+                await db.execute(ddl)
+            except Exception:
+                # Column already exists from a prior install — that's fine.
+                pass
         await db.execute("""CREATE TABLE IF NOT EXISTS links (
             id TEXT PRIMARY KEY, lab_id TEXT NOT NULL,
             src_node_id TEXT NOT NULL, dst_node_id TEXT NOT NULL,

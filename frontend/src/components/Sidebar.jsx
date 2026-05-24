@@ -233,12 +233,12 @@ export default function Sidebar({ onLogout }) {
           <div>
             <div style={{display:'flex',alignItems:'baseline'}}>
               <span style={{fontWeight:800,fontSize:17,color:'#ffffff',letterSpacing:'-0.5px',fontFamily:'system-ui,sans-serif'}}>OMNI</span>
-              <span style={{fontWeight:800,fontSize:17,color:'#6b7280',letterSpacing:'4px',fontFamily:'system-ui,sans-serif'}}>LAB</span>
+              <span style={{fontWeight:800,fontSize:17,color:'#6b7280',letterSpacing:'2.5px',fontFamily:'system-ui,sans-serif'}}>LAB</span>
             </div>
-            <div style={{fontSize:9,color:'#3b82f6',letterSpacing:'0.5px',fontFamily:'monospace',marginTop:1}}>OPEN MULTI-NODE INFRA</div>
+            <div style={{fontSize:11,color:'#58a6ff',letterSpacing:'0.5px',fontFamily:'monospace',marginTop:1}}>OPEN MULTI-NODE INFRA</div>
           </div>
         </div>
-        <div style={{fontSize:10,color:'#484f58',fontStyle:'italic'}}>Every node. Every stack. One lab.</div>
+        <div style={{fontSize:12,color:'#c9d1d9',fontStyle:'italic'}}>Every node. Every stack. One lab.</div>
       </div>
 
       {/* Nav */}
@@ -268,20 +268,20 @@ export default function Sidebar({ onLogout }) {
             <span style={{fontSize:11,fontWeight:600,color: dragOver==='root'?'#3b82f6':'#8b949e',textTransform:'uppercase',letterSpacing:'0.5px'}}>
               Labs ({labs.length}) {dragOver==='root'?'— drop to ungroup':''}
             </span>
-            <div style={{display:'flex',gap:4}}>
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
               <button title="New Folder" onClick={e=>{e.stopPropagation();createFolder(null)}}
-                style={{background:'transparent',border:'none',color:'#484f58',cursor:'pointer',fontSize:13,padding:'0 3px'}}
+                style={{background:'transparent',border:'none',color:'#6b7280',cursor:'pointer',fontSize:14,padding:'2px 4px',lineHeight:1}}
                 onMouseEnter={e=>e.currentTarget.style.color='#8b949e'}
-                onMouseLeave={e=>e.currentTarget.style.color='#484f58'}>📁+</button>
+                onMouseLeave={e=>e.currentTarget.style.color='#6b7280'}>📁</button>
               <button title="New Lab" onClick={async e=>{
                 e.stopPropagation()
                 const name=prompt('Lab name:'); if(!name) return
                 try{ const r=await createLab({name,category:'general'}); const l2=await getLabs(); setLabs(l2.data); navigate('/lab/'+r.data.id) }catch{}
               }}
-                style={{background:'transparent',border:'none',color:'#484f58',cursor:'pointer',fontSize:16,padding:'0 3px'}}
+                style={{background:'transparent',border:'none',color:'#6b7280',cursor:'pointer',fontSize:18,padding:'2px 4px',lineHeight:1}}
                 onMouseEnter={e=>e.currentTarget.style.color='#8b949e'}
-                onMouseLeave={e=>e.currentTarget.style.color='#484f58'}>+</button>
-            <button title="Import Lab" onClick={e=>{e.stopPropagation();handleImportLab()}} style={{background:'transparent',border:'none',color:'#8b949e',fontSize:14,cursor:'pointer',padding:'2px 4px'}}>⇩</button>
+                onMouseLeave={e=>e.currentTarget.style.color='#6b7280'}>+</button>
+            <button title="Import Lab" onClick={e=>{e.stopPropagation();handleImportLab()}} style={{background:'transparent',border:'none',color:'#6b7280',cursor:'pointer',fontSize:16,padding:'2px 4px',lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.color='#8b949e'} onMouseLeave={e=>e.currentTarget.style.color='#6b7280'}>⇩</button>
             <input ref={importFileInputRef} type="file" accept=".json,application/json" onChange={handleImportFile} style={{display:'none'}} />
             </div>
           </div>
@@ -318,7 +318,7 @@ export default function Sidebar({ onLogout }) {
             ⏻ Sign out
           </button>
         </div>
-        <div style={{padding:'0 16px 8px',fontSize:9,color:'#30363d'}}>v1.0.0 — Free Tier</div>
+        <div style={{padding:'0 16px 8px',fontSize:11,color:'#c9d1d9'}}>v1.0.0 — Free Tier</div>
       </div>
 
       {/* Delete-lab confirm */}

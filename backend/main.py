@@ -16,6 +16,7 @@ from api.nodes import router as nodes_router
 from api.system import router as system_router
 from api.templates import router as templates_router
 from api.updates import router as updates_router
+from api.web_proxy import router as web_proxy_router
 from core.database import init_db
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +29,28 @@ logger = logging.getLogger("omnilab")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    # CRE-39 phase 4: surface docker socket reachability at startup. We don't
+    # FAIL the boot on missing docker — the app still works for QEMU/PTY/VNC
+    # nodes — but we log a loud, actionable hint so the user knows why
+    # docker-typed nodes will 503 later.
+    try:
+        from services.docker_provisioner import (
+            DockerProvisioner,
+            DockerProvisionerError,
+        )
+        try:
+            DockerProvisioner()
+            logger.info("Docker daemon reachable — docker templates available.")
+        except DockerProvisionerError as exc:
+            logger.warning(
+                "Docker daemon unreachable: %s "
+                "Docker-typed nodes will 503 until this is fixed. "
+                "If running as a non-root user, add yourself to the 'docker' "
+                "group (sudo usermod -aG docker $USER && newgrp docker).",
+                exc,
+            )
+    except Exception as exc:  # noqa: BLE001 — never let the docker check kill the app
+        logger.warning("Docker reachability check skipped (%s)", exc)
     logger.info("OmniLab running!")
     yield
 
@@ -46,6 +69,12 @@ app.include_router(backup_router,   prefix="/api/backup",    tags=["backup"])
 app.include_router(health_router,   prefix="/api/health",    tags=["health"])
 app.include_router(system_router,    prefix="/api/system")
 app.include_router(console_router,   prefix="/api/console")
+# CRE-39: docker-node web-UI reverse proxy. Routes are
+#   /labs/{lab_id}/nodes/{node_id}/web/*       (HTTP)
+#   /labs/{lab_id}/nodes/{node_id}/web-ws/*    (WebSocket)
+#   /api/labs/{lab_id}/nodes/{node_id}/web-info (metadata)
+# MUST be included before the SPA catch-all below so requests aren't swallowed.
+app.include_router(web_proxy_router)
 
 
 # Reverse proxy for Guacamole web app

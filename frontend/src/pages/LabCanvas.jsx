@@ -820,6 +820,7 @@ export default function LabCanvas() {
         <div style={{position:'fixed',top:0,right:0,bottom:0,zIndex:1000,boxShadow:'-8px 0 24px rgba(0,0,0,.4)'}}>
           <NodePanel
             node={selectedNode}
+            labId={labId}
             onClose={()=>setSelectedNode(null)}
             onSaved={(id,{name,config})=>{
               setNodes(p=>p.map(n=>n.id===id?{...n,name:name||n.name,config:config!==undefined?config:n.config}:n))

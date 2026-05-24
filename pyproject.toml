@@ -39,7 +39,10 @@ ignore = [
 minversion = "8.0"
 testpaths = ["tests"]
 asyncio_mode = "auto"
-addopts = "-ra --strict-markers --tb=short"
+addopts = "-ra --strict-markers --tb=short -m 'not integration'"
+markers = [
+    "integration: tests that require a live docker daemon — run with `pytest -m integration` (CRE-39)",
+]
 filterwarnings = [
     "ignore::DeprecationWarning:pydantic.*",
     "ignore::DeprecationWarning:starlette.*",
