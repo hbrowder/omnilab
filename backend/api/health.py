@@ -54,6 +54,12 @@ async def get_system_metrics():
     elif disk.percent >= 80:
         disk_warning = f"Low disk space: {disk_free_gb:.1f}GB free. Consider cleaning up old images/labs."
 
+    # Import WebSocket connection counter from console.py
+    from api.console import get_active_websocket_count
+    
+    # Import request latency tracker from main.py
+    from main import get_avg_latency_ms
+
     return {
         "cpu": psutil.cpu_percent(interval=None),
         "cpu_cores": psutil.cpu_count(),
@@ -69,9 +75,9 @@ async def get_system_metrics():
         "disk_critical": disk_critical,
         "uptime": int(time.time() - _start_time),
         "api_healthy": True,
-        "ws_connections": 0,  # TODO: integrate with console.py WebSocket tracker
+        "ws_connections": get_active_websocket_count(),
         "requests_per_min": _request_count,
-        "avg_latency_ms": 0,  # TODO: integrate with middleware
+        "avg_latency_ms": round(get_avg_latency_ms(), 2),
         "errors_last_hour": _error_count_hour,
         "version": "1.0.0",
         "python_version": platform.python_version(),
@@ -155,11 +161,19 @@ async def get_network_info():
     except Exception:
         pass  # OVS may not be installed
 
+    # Count active network links from the database
+    from core.database import get_db
+    active_links = 0
+    async for db in get_db():
+        async with db.execute("SELECT COUNT(*) FROM links") as cur:
+            row = await cur.fetchone()
+            active_links = row[0] if row else 0
+
     return {
         "bridges": bridges,
         "interfaces_up": interfaces_up,
         "interfaces_down": interfaces_down,
-        "active_links": 0,  # TODO: query from DB
+        "active_links": active_links,
     }
 
 

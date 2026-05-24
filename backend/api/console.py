@@ -12,6 +12,12 @@ from services.docker_provisioner import (
 
 router = APIRouter()
 _sessions: dict = {}
+_active_websockets: int = 0  # Tracks currently connected console WebSockets
+
+
+def get_active_websocket_count() -> int:
+    """Return the count of active WebSocket console connections."""
+    return _active_websockets
 
 
 # ---------------------------------------------------------------------------
@@ -193,65 +199,70 @@ async def _docker_console_loop(node_id: str, ws: WebSocket):
 
 @router.websocket("/{node_id}/ws")
 async def console_ws(node_id: str, ws: WebSocket):
+    global _active_websockets
     await ws.accept()
+    _active_websockets += 1
 
-    # Look up the node type so we can dispatch. For an unknown / missing
-    # node we still send a clean error rather than crashing the handler.
-    node_type = ""
-    async for db in get_db():
-        async with db.execute(
-            "SELECT type, console_type FROM nodes WHERE id = ?", (node_id,)
-        ) as cur:
-            row = await cur.fetchone()
-        if row:
-            node_type = (row["type"] or "").lower()
-
-    if node_type == "docker":
-        await _docker_console_loop(node_id, ws)
-        return
-
-    # ----- legacy PTY path (host shell — kept for existing 'pty' nodes) -----
-    proc = _sessions.get(node_id)
-    if proc is None or not proc.isalive():
-        shell = os.environ.get("SHELL", "/bin/bash")
-        proc = ptyprocess.PtyProcess.spawn(
-            [shell, "--login"],
-            env={**os.environ, "TERM": "xterm-256color"},
-        )
-        _sessions[node_id] = proc
-    stop = asyncio.Event()
-    reader = asyncio.create_task(_relay(proc, ws, stop))
     try:
-        while not stop.is_set():
-            try:
-                msg = await asyncio.wait_for(ws.receive(), timeout=0.05)
-            except asyncio.TimeoutError:
-                if not proc.isalive():
-                    break
-                continue
-            except WebSocketDisconnect:
-                break
-            if msg.get("type") == "websocket.disconnect":
-                break
-            if msg.get("bytes"):
-                try:
-                    os.write(proc.fd, msg["bytes"])
-                except OSError:
-                    break
-            if msg.get("text"):
-                try:
-                    evt = json.loads(msg["text"])
-                    if evt.get("type") == "resize":
-                        proc.setwinsize(int(evt.get("rows", 24)), int(evt.get("cols", 80)))
-                except Exception:
-                    pass
-    finally:
-        stop.set()
-        reader.cancel()
+        # Look up the node type so we can dispatch. For an unknown / missing
+        # node we still send a clean error rather than crashing the handler.
+        node_type = ""
+        async for db in get_db():
+            async with db.execute(
+                "SELECT type, console_type FROM nodes WHERE id = ?", (node_id,)
+            ) as cur:
+                row = await cur.fetchone()
+            if row:
+                node_type = (row["type"] or "").lower()
+
+        if node_type == "docker":
+            await _docker_console_loop(node_id, ws)
+            return
+
+        # ----- legacy PTY path (host shell — kept for existing 'pty' nodes) -----
+        proc = _sessions.get(node_id)
+        if proc is None or not proc.isalive():
+            shell = os.environ.get("SHELL", "/bin/bash")
+            proc = ptyprocess.PtyProcess.spawn(
+                [shell, "--login"],
+                env={**os.environ, "TERM": "xterm-256color"},
+            )
+            _sessions[node_id] = proc
+        stop = asyncio.Event()
+        reader = asyncio.create_task(_relay(proc, ws, stop))
         try:
-            await reader
-        except asyncio.CancelledError:
-            pass
+            while not stop.is_set():
+                try:
+                    msg = await asyncio.wait_for(ws.receive(), timeout=0.05)
+                except asyncio.TimeoutError:
+                    if not proc.isalive():
+                        break
+                    continue
+                except WebSocketDisconnect:
+                    break
+                if msg.get("type") == "websocket.disconnect":
+                    break
+                if msg.get("bytes"):
+                    try:
+                        os.write(proc.fd, msg["bytes"])
+                    except OSError:
+                        break
+                if msg.get("text"):
+                    try:
+                        evt = json.loads(msg["text"])
+                        if evt.get("type") == "resize":
+                            proc.setwinsize(int(evt.get("rows", 24)), int(evt.get("cols", 80)))
+                    except Exception:
+                        pass
+        finally:
+            stop.set()
+            reader.cancel()
+            try:
+                await reader
+            except asyncio.CancelledError:
+                pass
+    finally:
+        _active_websockets -= 1
 
 
 # ============================================================
@@ -298,51 +309,56 @@ async def _relay_tcp_to_ws(reader: asyncio.StreamReader, ws: WebSocket, stop: as
 @router.websocket("/{node_id}/vnc-ws")
 async def vnc_ws(node_id: str, ws: WebSocket):
     """Raw WebSocket <-> TCP proxy to QEMU VNC server."""
+    global _active_websockets
     await ws.accept()
-
-    # Look up the VNC port for this node
-    vnc_port = None
-    async for db in get_db():
-        async with db.execute(
-            "SELECT vnc_port, status FROM nodes WHERE id = ?", (node_id,)
-        ) as cur:
-            row = await cur.fetchone()
-        if row:
-            vnc_port = row["vnc_port"]
-
-    if not vnc_port:
-        await ws.send_text("ERROR: Node has no VNC port assigned. Start the node first.")
-        await ws.close()
-        return
-
-    # Connect to QEMU VNC TCP server
-    try:
-        reader, writer = await asyncio.open_connection("127.0.0.1", vnc_port)
-    except OSError as e:
-        await ws.send_text(f"ERROR: Cannot connect to VNC server on port {vnc_port}: {e}")
-        await ws.close()
-        return
-
-    stop = asyncio.Event()
-    t1 = asyncio.create_task(_relay_ws_to_tcp(ws, writer, stop))
-    t2 = asyncio.create_task(_relay_tcp_to_ws(reader, ws, stop))
+    _active_websockets += 1
 
     try:
-        await asyncio.wait([t1, t2], return_when=asyncio.FIRST_COMPLETED)
-    finally:
-        stop.set()
-        t1.cancel()
-        t2.cancel()
+        # Look up the VNC port for this node
+        vnc_port = None
+        async for db in get_db():
+            async with db.execute(
+                "SELECT vnc_port, status FROM nodes WHERE id = ?", (node_id,)
+            ) as cur:
+                row = await cur.fetchone()
+            if row:
+                vnc_port = row["vnc_port"]
+
+        if not vnc_port:
+            await ws.send_text("ERROR: Node has no VNC port assigned. Start the node first.")
+            await ws.close()
+            return
+
+        # Connect to QEMU VNC TCP server
         try:
-            writer.close()
-            await writer.wait_closed()
-        except Exception:
-            pass
-        for t in [t1, t2]:
+            reader, writer = await asyncio.open_connection("127.0.0.1", vnc_port)
+        except OSError as e:
+            await ws.send_text(f"ERROR: Cannot connect to VNC server on port {vnc_port}: {e}")
+            await ws.close()
+            return
+
+        stop = asyncio.Event()
+        t1 = asyncio.create_task(_relay_ws_to_tcp(ws, writer, stop))
+        t2 = asyncio.create_task(_relay_tcp_to_ws(reader, ws, stop))
+
+        try:
+            await asyncio.wait([t1, t2], return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            stop.set()
+            t1.cancel()
+            t2.cancel()
             try:
-                await t
-            except asyncio.CancelledError:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
                 pass
+            for t in [t1, t2]:
+                try:
+                    await t
+                except asyncio.CancelledError:
+                    pass
+    finally:
+        _active_websockets -= 1
 
 
 # ============================================================

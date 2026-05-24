@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -25,6 +26,17 @@ from fastapi.staticfiles import StaticFiles
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("omnilab")
+
+# Request timing stats for health metrics
+_request_times: list[float] = []
+_max_samples = 100
+
+
+def get_avg_latency_ms() -> float:
+    """Return average API latency in milliseconds over the last N requests."""
+    if not _request_times:
+        return 0.0
+    return sum(_request_times) / len(_request_times)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -57,6 +69,22 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="OmniLab", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+# Request timing middleware for /api/health/metrics
+@app.middleware("http")
+async def timing_middleware(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    
+    # Only track API calls (ignore static files, websockets, health endpoint itself to avoid recursion)
+    if request.url.path.startswith("/api") and "/health" not in request.url.path:
+        _request_times.append(elapsed_ms)
+        if len(_request_times) > _max_samples:
+            _request_times.pop(0)
+    
+    return response
 
 app.include_router(license_router, prefix="/api/license", tags=["license"])
 app.include_router(billing_router, prefix="/api/billing", tags=["billing"])
