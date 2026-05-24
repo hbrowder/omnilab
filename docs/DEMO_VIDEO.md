@@ -202,29 +202,49 @@ The 0:15 cut is the highest-leverage variant — it's what you'll post in every 
 
 ---
 
-## What I can do without your involvement
+## Prep status (updated 2026-05-24)
 
-- [x] **Done:** script (this file)
-- [x] **Done:** seed lab JSONs at `docs/demo-assets/seed-labs/{security-stack,empty,networking-triangle}.json` (+ README with one-shot import loop)
-- [x] **Done:** SRT caption track at `docs/demo-assets/captions/omnilab-90.srt`
-- [x] **Done:** launch copy drafts at `docs/demo-assets/launch-copy.md` (HN, PH, LinkedIn, X thread, README hero, posting schedule)
+✅ **PREP COMPLETE — READY FOR RECORDING**
 
-## What needs you
+Agent-delivered assets (all committed to main):
+- [x] Script (this file) — 230 lines, 8 beats, 90 seconds
+- [x] Seed lab JSONs at `docs/demo-assets/seed-labs/{security-stack,empty,networking-triangle}.json`
+- [x] SRT caption track at `docs/demo-assets/captions/omnilab-90.srt` (35 cues)
+- [x] Launch copy drafts at `docs/demo-assets/launch-copy.md` (HN, PH, LinkedIn, X thread)
+- [x] **Recording checklist** at `docs/CRE-26-RECORDING-CHECKLIST.md` (9,188 bytes)
+  - Tag command (v1.0.0-rc.1, copy-paste ready)
+  - Seed lab import commands (3 curl commands)
+  - OBS Studio settings (1080p60, 8 Mbps CBR)
+  - Complete 4-hour production timeline
+  - Post-production workflow
+  - Upload instructions
 
-- Recording (your face/voice are not in this, but the keystrokes and mouse work are)
-- Editing (NLE choice, music selection, color grade)
-- Final review before publish
+Current commit: `1e1f02d` (checklist pushed to main)  
+Linear: CRE-26 updated with recording-ready comment
+
+## What needs Harold (manual work)
+
+**Estimated time: 4 hours (single-session workflow)**
+
+1. **Tag v1.0.0-rc.1** (2 min) — git tag + push
+2. **Import seed labs** (5 min) — 3 curl commands in checklist
+3. **OBS setup** (10 min) — configure capture settings
+4. **Record raw clips** (60 min) — 8 beats × 3-5 takes
+5. **Edit in NLE** (2.5 hours) — cut, captions, music, color, export
+6. **Upload to YouTube** (15 min) — unlisted, grab embed URL
+7. **Post URL to Linear CRE-26** (2 min)
+
+See `docs/CRE-26-RECORDING-CHECKLIST.md` for step-by-step commands.
 
 ---
 
-## When this is done
+## When recording is complete
 
-Once the master cut exists at `docs/media/omnilab-90.mp4`:
+Once the master cut exists and is uploaded to YouTube:
 
-1. Upload to YouTube as **unlisted** (we'll flip to public on launch day)
-2. Drop the YouTube URL into Linear CRE-26
-3. Commit a low-res copy (under 25 MB) to the repo at `docs/media/`
-4. Embed the GIF variant in `README.md` (above the install section)
-5. Move CRE-26 to **Done**
+1. Harold posts YouTube URL to Linear CRE-26
+2. Agent updates README.md with hero embed
+3. Agent closes CRE-26 → Done
+4. **Unblocked:** CRE-27 (beta recruitment), CRE-24 (Product Hunt), CRE-25 (Show HN)
 
-Then CRE-27 (beta recruitment) and CRE-24 (Product Hunt prep) are both unblocked.
+Then launch tasks can proceed with demo video in hand.
