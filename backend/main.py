@@ -132,10 +132,10 @@ async def guacamole_proxy(path: str, request: Request):
         media_type=resp.headers.get("content-type"),
     )
 
-DIST = pathlib.Path.home() / "netlab/frontend/dist"
+DIST = pathlib.Path.home() / "omnilab/frontend/dist"
 
 # Serve noVNC static files for VNC console
-NOVNC_DIR = pathlib.Path.home() / "netlab/backend/static/novnc"
+NOVNC_DIR = pathlib.Path.home() / "omnilab/backend/static/novnc"
 if NOVNC_DIR.exists():
     app.mount("/novnc", StaticFiles(directory=str(NOVNC_DIR)), name="novnc")
 
