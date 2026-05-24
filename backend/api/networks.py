@@ -41,11 +41,15 @@ async def list_links(lab_id: str):
 async def create_link(data: LinkCreate):
     link_id = str(uuid.uuid4())
     async for db in get_db():
-        await db.execute(
-            "INSERT INTO links (id, lab_id, src_node_id, dst_node_id, style) VALUES (?, ?, ?, ?, ?)",
-            (link_id, data.lab_id, data.src_node_id, data.dst_node_id, data.style or "solid")
-        )
-        await db.commit()
+        try:
+            await db.execute(
+                "INSERT INTO links (id, lab_id, src_node_id, dst_node_id, style) VALUES (?, ?, ?, ?, ?)",
+                (link_id, data.lab_id, data.src_node_id, data.dst_node_id, data.style or "solid")
+            )
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to create link: {str(e)}")
     return {"id": link_id, "lab_id": data.lab_id,
             "src_node_id": data.src_node_id, "dst_node_id": data.dst_node_id,
             "style": data.style or "solid",
@@ -80,11 +84,15 @@ async def set_link_quality(link_id: str, q: LinkQuality):
             values.append(q.style)
 
         if fields:
-            await db.execute(
-                "UPDATE links SET " + ", ".join(fields) + " WHERE id = ?",
-                values + [link_id]
-            )
-            await db.commit()
+            try:
+                await db.execute(
+                    "UPDATE links SET " + ", ".join(fields) + " WHERE id = ?",
+                    values + [link_id]
+                )
+                await db.commit()
+            except Exception as e:
+                await db.rollback()
+                raise HTTPException(status_code=500, detail=f"Failed to update link quality: {str(e)}")
 
         async with db.execute("SELECT * FROM links WHERE id = ?", (link_id,)) as cur:
             updated = await cur.fetchone()
@@ -94,6 +102,10 @@ async def set_link_quality(link_id: str, q: LinkQuality):
 @router.delete("/links/{link_id}", status_code=204)
 async def delete_link(link_id: str):
     async for db in get_db():
-        await db.execute("DELETE FROM links WHERE id = ?", (link_id,))
-        await db.commit()
+        try:
+            await db.execute("DELETE FROM links WHERE id = ?", (link_id,))
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to delete link: {str(e)}")
     return None

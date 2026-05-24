@@ -41,10 +41,14 @@ async def create_lab(data: LabCreate):
     
     lab_id = str(uuid.uuid4())
     async for db in get_db():
-        await db.execute("INSERT INTO labs (id, name, description, category) VALUES (?, ?, ?, ?)",
-            (lab_id, data.name, data.description, data.category))
-        await db.commit()
-    return {"id": lab_id, "name": data.name, "status": "stopped"}
+        try:
+            await db.execute("INSERT INTO labs (id, name, description) VALUES (?, ?, ?)",
+                           (lab_id, data.name, data.description))
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to create lab: {str(e)}")
+    return {"id": lab_id, "name": data.name, "description": data.description}
 
 @router.get("/{lab_id}")
 async def get_lab(lab_id: str):
@@ -58,8 +62,12 @@ async def get_lab(lab_id: str):
 @router.delete("/{lab_id}", status_code=204)
 async def delete_lab(lab_id: str):
     async for db in get_db():
-        await db.execute("DELETE FROM labs WHERE id = ?", (lab_id,))
-        await db.commit()
+        try:
+            await db.execute("DELETE FROM labs WHERE id = ?", (lab_id,))
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to delete lab: {str(e)}")
 
 @router.get("/{lab_id}/topology")
 async def get_topology(lab_id: str):
@@ -131,51 +139,58 @@ async def import_lab(payload: ImportPayload):
     category = (payload.lab or {}).get("category") or "general"
 
     async for db in get_db():
-        # Resolve name collision: append (2), (3) ... if needed.
-        name = base_name
-        suffix = 2
-        while True:
-            async with db.execute("SELECT 1 FROM labs WHERE name = ?", (name,)) as cur:
-                if not await cur.fetchone():
-                    break
-            name = f"{base_name} ({suffix})"
-            suffix += 1
-            if suffix > 999:
-                raise HTTPException(status_code=409, detail="Too many name collisions")
+        try:
+            # Resolve name collision: append (2), (3) ... if needed.
+            name = base_name
+            suffix = 2
+            while True:
+                async with db.execute("SELECT 1 FROM labs WHERE name = ?", (name,)) as cur:
+                    if not await cur.fetchone():
+                        break
+                name = f"{base_name} ({suffix})"
+                suffix += 1
+                if suffix > 999:
+                    raise HTTPException(status_code=409, detail="Too many name collisions")
 
-        lab_id = str(uuid.uuid4())
-        await db.execute(
-            "INSERT INTO labs (id, name, description, category) VALUES (?, ?, ?, ?)",
-            (lab_id, name, description, category))
-
-        name_to_new_id = {}
-        for n in payload.nodes or []:
-            new_id = str(uuid.uuid4())
-            n_name = n.get("name")
-            n_type = n.get("type")
-            if not n_name or not n_type:
-                continue
-            cfg = n.get("config")
-            if isinstance(cfg, dict):
-                cfg = json.dumps(cfg)
-            if cfg is None:
-                cfg = "{}"
+            lab_id = str(uuid.uuid4())
             await db.execute(
-                "INSERT INTO nodes (id, lab_id, name, type, image, config, x, y) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (new_id, lab_id, n_name, n_type, n.get("image"), cfg,
-                 n.get("x") or 100, n.get("y") or 100))
-            name_to_new_id[n_name] = new_id
+                "INSERT INTO labs (id, name, description, category) VALUES (?, ?, ?, ?)",
+                (lab_id, name, description, category))
 
-        for link in payload.links or []:
-            sid = name_to_new_id.get(link.get("src_name"))
-            did = name_to_new_id.get(link.get("dst_name"))
-            if not sid or not did:
-                continue
-            await db.execute(
-                "INSERT INTO links (id, lab_id, src_node_id, dst_node_id) VALUES (?, ?, ?, ?)",
-                (str(uuid.uuid4()), lab_id, sid, did))
+            name_to_new_id = {}
+            for n in payload.nodes or []:
+                new_id = str(uuid.uuid4())
+                n_name = n.get("name")
+                n_type = n.get("type")
+                if not n_name or not n_type:
+                    continue
+                cfg = n.get("config")
+                if isinstance(cfg, dict):
+                    cfg = json.dumps(cfg)
+                if cfg is None:
+                    cfg = "{}"
+                await db.execute(
+                    "INSERT INTO nodes (id, lab_id, name, type, image, config, x, y) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (new_id, lab_id, n_name, n_type, n.get("image"), cfg,
+                     n.get("x") or 100, n.get("y") or 100))
+                name_to_new_id[n_name] = new_id
 
-        await db.commit()
+            for link in payload.links or []:
+                sid = name_to_new_id.get(link.get("src_name"))
+                did = name_to_new_id.get(link.get("dst_name"))
+                if not sid or not did:
+                    continue
+                await db.execute(
+                    "INSERT INTO links (id, lab_id, src_node_id, dst_node_id) VALUES (?, ?, ?, ?)",
+                    (str(uuid.uuid4()), lab_id, sid, did))
+
+            await db.commit()
+        except HTTPException:
+            await db.rollback()
+            raise
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to import lab: {str(e)}")
     return {"id": lab_id, "name": name, "status": "stopped",
             "imported_nodes": len(name_to_new_id),
             "imported_links": len(payload.links or [])}

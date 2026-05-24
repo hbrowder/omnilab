@@ -4,7 +4,7 @@ from pathlib import Path
 
 class Settings:
     PORT: int = int(os.getenv("OMNILAB_PORT", 5000))
-    DEBUG: bool = True
+    DEBUG: bool = os.getenv("OMNILAB_DEBUG", "false").lower() in ("true", "1", "yes")
     BASE_DIR: Path = Path.home() / ".omnilab"
     LABS_DIR: Path = BASE_DIR / "labs"
     IMAGES_DIR: Path = BASE_DIR / "images"

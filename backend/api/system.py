@@ -108,21 +108,25 @@ async def first_run_complete(payload: FirstRunComplete):
 
         # Hash the password — bcrypt with a 12-round cost (sensible default
         # in 2026). The salt is embedded in the returned hash.
-        hashed = bcrypt.hashpw(
-            payload.password.encode("utf-8"), bcrypt.gensalt(rounds=12)
-        ).decode("utf-8")
-
-        now = datetime.now(timezone.utc).isoformat()
-        await db.execute(
-            """UPDATE settings
-               SET first_run_complete = 1,
-                   admin_password_hash = ?,
-                   telemetry_enabled = ?,
-                   updated_at = ?
-               WHERE id = 1""",
-            (hashed, 1 if payload.telemetry else 0, now),
-        )
-        await db.commit()
+    async for db in get_db():
+        try:
+            hashed = bcrypt.hashpw(
+                payload.admin_password.encode(), bcrypt.gensalt()
+            ).decode()
+            now = datetime.now(timezone.utc).isoformat()
+            await db.execute(
+                """UPDATE settings
+                   SET first_run_complete = 1,
+                       admin_password_hash = ?,
+                       telemetry_enabled = ?,
+                       updated_at = ?
+                   WHERE id = 1""",
+                (hashed, 1 if payload.telemetry else 0, now),
+            )
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to complete setup wizard: {str(e)}")
 
     license_result: dict | None = None
     if payload.license_key:
