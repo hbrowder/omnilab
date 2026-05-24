@@ -128,4 +128,29 @@ async def spa_fallback(full_path: str):
     return FileResponse(str(DIST / "index.html"))
 
 if __name__ == "__main__":
+    import sys
+    
+    # Security banner for v1.0 (localhost-only deployment model)
+    print("\n" + "="*70)
+    print("  OmniLab v1.0 - Network Emulation Platform")
+    print("="*70)
+    print("  ⚠️  SECURITY NOTICE: No authentication enabled")
+    print("     → Safe for: localhost-only deployments")
+    print("     → Unsafe for: internet-exposed or LAN-wide deployments")
+    print("     → Multi-user auth coming in v1.1")
+    print("="*70 + "\n")
+    
+    # Warn if binding to 0.0.0.0 (accessible beyond localhost)
+    host = sys.argv[sys.argv.index("--host") + 1] if "--host" in sys.argv else "0.0.0.0"
+    if host in ("0.0.0.0", "0"):
+        print("⚠️  WARNING: Binding to 0.0.0.0 exposes OmniLab to your network")
+        print("   Anyone on your network can access this instance WITHOUT authentication.")
+        print("   Press Ctrl+C within 5 seconds to cancel...\n")
+        import time
+        try:
+            time.sleep(5)
+        except KeyboardInterrupt:
+            print("\n✋ Startup cancelled by user\n")
+            sys.exit(0)
+    
     uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=False)

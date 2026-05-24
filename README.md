@@ -54,6 +54,14 @@ npm install
 npm run dev                    # listens on :5173
 ```
 
+**⚠️ Security Notice (v1.0):**  
+OmniLab v1.0 has **no authentication**. It is designed for **localhost-only** single-user deployments (similar to EVE-NG Community Edition). Do NOT expose port 5000 to:
+- The internet (public IP)
+- Your LAN (0.0.0.0 binding without firewall)
+- Untrusted users
+
+Multi-user authentication is coming in **v1.1**. For now, treat OmniLab like a local development tool.
+
 Health check: `curl http://localhost:5000/api/system/health`
 
 ---
