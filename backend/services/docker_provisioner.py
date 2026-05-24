@@ -15,6 +15,7 @@ and ``api/console.py`` is phase 2.
 from __future__ import annotations
 
 import asyncio
+import errno
 from typing import Any, Callable
 
 try:
@@ -35,6 +36,38 @@ SHELL_FALLBACKS = ("/bin/bash", "/bin/sh", "/bin/ash")
 
 class DockerProvisionerError(RuntimeError):
     """Raised when docker is unreachable or an operation fails unrecoverably."""
+
+
+class DiskFullError(DockerProvisionerError):
+    """Raised when an operation fails due to ENOSPC (errno 28).
+    
+    Surfaced separately so calling code can present actionable guidance:
+    - Run `docker system prune` to free image layers
+    - Run `omnilab gc --apply` to delete orphaned labs
+    - Add disk space to the host
+    """
+
+
+def _is_disk_full_error(exc: Exception) -> bool:
+    """Detect ENOSPC (errno 28) in Docker APIError or OSError chains.
+    
+    Docker SDK wraps OS-level ENOSPC in APIError with the text buried in
+    .explanation or str(exc). We check both errno attribute and string
+    matching to catch all variants.
+    """
+    # Direct OSError with errno 28
+    if isinstance(exc, OSError) and exc.errno == errno.ENOSPC:
+        return True
+    
+    # Docker APIError wrapping ENOSPC
+    if hasattr(exc, "explanation"):
+        explanation = str(exc.explanation).lower()
+        if "no space left" in explanation or "enospc" in explanation:
+            return True
+    
+    # Fallback: scan the full exception string
+    exc_str = str(exc).lower()
+    return "no space left" in exc_str or "enospc" in exc_str or "errno 28" in exc_str
 
 
 def _container_name(node_id: str) -> str:
@@ -97,16 +130,29 @@ class DockerProvisioner:
                 pass
 
             api = self.client.api
-            for event in api.pull(image, stream=True, decode=True):
-                if progress_cb is not None:
-                    try:
-                        progress_cb(event)
-                    except Exception:  # noqa: BLE001 — never let a UI cb kill a pull
-                        pass
-                if isinstance(event, dict) and event.get("error"):
-                    raise DockerProvisionerError(
-                        f"docker pull {image} failed: {event['error']}"
-                    )
+            try:
+                for event in api.pull(image, stream=True, decode=True):
+                    if progress_cb is not None:
+                        try:
+                            progress_cb(event)
+                        except Exception:  # noqa: BLE001 — never let a UI cb kill a pull
+                            pass
+                    if isinstance(event, dict) and event.get("error"):
+                        error_msg = event['error']
+                        # Check if this is a disk-full error
+                        if "no space left" in error_msg.lower() or "enospc" in error_msg.lower():
+                            raise DiskFullError(
+                                f"Cannot pull {image}: no disk space left. "
+                                "Free space with 'docker system prune' or 'omnilab gc --apply'."
+                            )
+                        raise DockerProvisionerError(f"docker pull {image} failed: {error_msg}")
+            except (OSError, APIError) as exc:
+                if _is_disk_full_error(exc):
+                    raise DiskFullError(
+                        f"Cannot pull {image}: no disk space left. "
+                        "Free space with 'docker system prune' or 'omnilab gc --apply'."
+                    ) from exc
+                raise
 
         await asyncio.to_thread(_pull)
 
@@ -194,17 +240,25 @@ class DockerProvisioner:
             run_kwargs.update(docker_options)
 
         def _run() -> dict:
-            container = self.client.containers.run(image, **run_kwargs)
-            container.reload()
-            networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
-            ip_address = ""
-            if network_name in networks:
-                ip_address = networks[network_name].get("IPAddress", "") or ""
-            return {
-                "container_id": container.id,
-                "ip_address": ip_address,
-                "ports": container.attrs.get("NetworkSettings", {}).get("Ports", {}) or {},
-            }
+            try:
+                container = self.client.containers.run(image, **run_kwargs)
+                container.reload()
+                networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
+                ip_address = ""
+                if network_name in networks:
+                    ip_address = networks[network_name].get("IPAddress", "") or ""
+                return {
+                    "container_id": container.id,
+                    "ip_address": ip_address,
+                    "ports": container.attrs.get("NetworkSettings", {}).get("Ports", {}) or {},
+                }
+            except (OSError, APIError) as exc:
+                if _is_disk_full_error(exc):
+                    raise DiskFullError(
+                        f"Cannot start node {node_id}: no disk space left. "
+                        "Free space with 'docker system prune' or 'omnilab gc --apply'."
+                    ) from exc
+                raise
 
         return await asyncio.to_thread(_run)
 

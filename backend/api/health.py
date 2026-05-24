@@ -40,6 +40,19 @@ async def get_system_metrics():
     p = psutil.Process(os.getpid())
     mem = psutil.virtual_memory()
     disk = psutil.disk_usage("/")
+    
+    # CRE-49: Disk space warnings for ENOSPC prevention
+    disk_free_gb = disk.free / (1024**3)
+    disk_warning = None
+    disk_critical = False
+    
+    if disk.percent >= 95:
+        disk_critical = True
+        disk_warning = f"CRITICAL: Only {disk_free_gb:.1f}GB free. New labs will fail. Run 'docker system prune' or 'omnilab gc --apply' immediately."
+    elif disk.percent >= 90:
+        disk_warning = f"WARNING: Only {disk_free_gb:.1f}GB free ({100-disk.percent:.0f}% remaining). Free space soon to prevent failures."
+    elif disk.percent >= 80:
+        disk_warning = f"Low disk space: {disk_free_gb:.1f}GB free. Consider cleaning up old images/labs."
 
     return {
         "cpu": psutil.cpu_percent(interval=None),
@@ -50,6 +63,10 @@ async def get_system_metrics():
         "disk": disk.percent,
         "disk_total": disk.total,
         "disk_used": disk.used,
+        "disk_free": disk.free,
+        "disk_free_gb": round(disk_free_gb, 2),
+        "disk_warning": disk_warning,
+        "disk_critical": disk_critical,
         "uptime": int(time.time() - _start_time),
         "api_healthy": True,
         "ws_connections": 0,  # TODO: integrate with console.py WebSocket tracker
