@@ -1,4 +1,5 @@
 import json
+import shutil
 import uuid
 
 from core.database import get_db
@@ -20,6 +21,24 @@ async def list_labs():
 
 @router.post("/", status_code=201)
 async def create_lab(data: LabCreate):
+    # CRE-49: Pre-flight disk space check — refuse lab creation if <10% free
+    try:
+        disk = shutil.disk_usage("/")
+        disk_free_percent = (disk.free / disk.total) * 100
+        if disk_free_percent < 10:
+            raise HTTPException(
+                status_code=507,  # HTTP 507 Insufficient Storage
+                detail=(
+                    f"Cannot create lab: only {disk_free_percent:.1f}% disk space remaining. "
+                    "Free space with 'docker system prune' or 'omnilab gc --apply' before creating new labs."
+                )
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        # Never let disk check kill lab creation if shutil fails
+        pass
+    
     lab_id = str(uuid.uuid4())
     async for db in get_db():
         await db.execute("INSERT INTO labs (id, name, description, category) VALUES (?, ?, ?, ?)",
