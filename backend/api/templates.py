@@ -562,43 +562,47 @@ async def deploy_template(template_id: str, lab_name: str | None = None):
 
     lab_id = str(uuid.uuid4())
     async for db in get_db():
-        await db.execute(
-            "INSERT INTO labs (id,name,description,category) VALUES (?,?,?,?)",
-            (
-                lab_id,
-                lab_name or template["name"],
-                template["description"],
-                template["category"],
-            ),
-        )
-        nm: dict[str, str] = {}
-        for n in template["nodes"]:
-            nid = str(uuid.uuid4())
-            nm[n["name"]] = nid
-            cfg_payload = _node_config_payload(n)
+        try:
             await db.execute(
-                "INSERT INTO nodes (id,lab_id,name,type,image,config,x,y)"
-                " VALUES (?,?,?,?,?,?,?,?)",
+                "INSERT INTO labs (id,name,description,category) VALUES (?,?,?,?)",
                 (
-                    nid,
                     lab_id,
-                    n["name"],
-                    n["type"],
-                    n.get("image"),
-                    json.dumps(cfg_payload),
-                    n["x"],
-                    n["y"],
+                    lab_name or template["name"],
+                    template["description"],
+                    template["category"],
                 ),
             )
-        for lnk in template.get("links", []):
-            s, d = nm.get(lnk["src"]), nm.get(lnk["dst"])
-            if s and d:
+            nm: dict[str, str] = {}
+            for n in template["nodes"]:
+                nid = str(uuid.uuid4())
+                nm[n["name"]] = nid
+                cfg_payload = _node_config_payload(n)
                 await db.execute(
-                    "INSERT INTO links (id,lab_id,src_node_id,dst_node_id)"
-                    " VALUES (?,?,?,?)",
-                    (str(uuid.uuid4()), lab_id, s, d),
+                    "INSERT INTO nodes (id,lab_id,name,type,image,config,x,y)"
+                    " VALUES (?,?,?,?,?,?,?,?)",
+                    (
+                        nid,
+                        lab_id,
+                        n["name"],
+                        n["type"],
+                        n["image"],
+                        json.dumps(cfg_payload),
+                        n["x"],
+                        n["y"],
+                    ),
                 )
-        await db.commit()
+            for lnk in template.get("links", []):
+                s, d = nm.get(lnk["src"]), nm.get(lnk["dst"])
+                if s and d:
+                    await db.execute(
+                        "INSERT INTO links (id,lab_id,src_node_id,dst_node_id)"
+                        " VALUES (?,?,?,?)",
+                        (str(uuid.uuid4()), lab_id, s, d),
+                    )
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to instantiate template: {str(e)}")
     return {
         "lab_id": lab_id,
         "name": lab_name or template["name"],

@@ -54,10 +54,14 @@ class NodeCreate(BaseModel):
 async def add_node(data: NodeCreate):
     node_id = str(uuid.uuid4())
     async for db in get_db():
-        await db.execute(
-            "INSERT INTO nodes (id, lab_id, name, type, image, config, x, y, console_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (node_id, data.lab_id, data.name, data.type, data.image, json.dumps(data.config), data.x, data.y, data.console_type or 'pty'))
-        await db.commit()
+        try:
+            await db.execute(
+                "INSERT INTO nodes (id, lab_id, name, type, image, config, x, y, console_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (node_id, data.lab_id, data.name, data.type, data.image, json.dumps(data.config), data.x, data.y, data.console_type or 'pty'))
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to create node: {str(e)}")
     return {"id": node_id, "name": data.name, "type": data.type, "status": "stopped", "console_type": data.console_type or "pty"}
 
 @router.get("/{node_id}")
@@ -72,8 +76,12 @@ async def get_node(node_id: str):
 @router.delete("/{node_id}", status_code=204)
 async def delete_node(node_id: str):
     async for db in get_db():
-        await db.execute("DELETE FROM nodes WHERE id = ?", (node_id,))
-        await db.commit()
+        try:
+            await db.execute("DELETE FROM nodes WHERE id = ?", (node_id,))
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to delete node: {str(e)}")
 
 import subprocess as _subprocess
 
