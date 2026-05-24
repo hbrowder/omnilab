@@ -123,7 +123,7 @@ ps -ef | grep 'python.*main.py' | grep -v grep
 sudo ss -ltnp | grep ':5000'
 
 # Start (if stopped)
-cd ~/netlab/backend && nohup ~/netlab-env/bin/python main.py > /tmp/omnilab.log 2>&1 &
+cd ~/omnilab/backend && nohup ~/omnilab-env/bin/python main.py > /tmp/omnilab.log 2>&1 &
 
 # Watch logs
 tail -f /tmp/omnilab.log

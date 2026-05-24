@@ -48,10 +48,10 @@ the live backend:
 ```bash
 # Default: every template except pentest-lab (already verified) and the
 # coming_soon ones
-~/netlab-env/bin/python ~/netlab/scripts/smoke_test_templates.py
+~/omnilab-env/bin/python ~/omnilab/scripts/smoke_test_templates.py
 
-# Subset — only the templates you want to verify
-~/netlab-env/bin/python ~/netlab/scripts/smoke_test_templates.py threat-hunting mlops-lab
+# Specific templates only:
+~/omnilab-env/bin/python ~/omnilab/scripts/smoke_test_templates.py threat-hunting mlops-lab
 ```
 
 Results are written to `/tmp/smoke_test_results.json`.

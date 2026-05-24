@@ -5,9 +5,9 @@ Pytest baseline scaffolded by CRE-34.
 ## Running
 
 ```bash
-~/netlab-env/bin/pytest                # full suite
-~/netlab-env/bin/pytest tests/test_license.py -v
-~/netlab-env/bin/pytest -k tier        # by keyword
+~/omnilab-env/bin/pytest                # full suite
+~/omnilab-env/bin/pytest tests/test_license.py -v
+~/omnilab-env/bin/pytest -k tier        # by keyword
 ```
 
 All tests are isolated from your real install:

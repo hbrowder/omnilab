@@ -11,7 +11,7 @@ For each template:
      → expect 2xx/3xx
   5. Cleanup: stop all nodes + delete the lab
 
-Run with: ~/netlab-env/bin/python ~/netlab/scripts/smoke_test_templates.py [template_id ...]
+Run with: ~/omnilab-env/bin/python ~/omnilab/scripts/smoke_test_templates.py [template_id ...]
 If no template IDs supplied, runs all docker-typed templates except pentest-lab (already verified).
 """
 

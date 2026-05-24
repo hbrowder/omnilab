@@ -1,7 +1,7 @@
 """Build site/docs/api/index.html from the live FastAPI OpenAPI spec.
 
 Run with the backend venv:
-    ~/netlab-env/bin/python scripts/build_api_docs.py
+    ~/omnilab-env/bin/python scripts/build_api_docs.py
 
 Output: site/docs/api/index.html (plus the raw spec at site/docs/api/openapi.json).
 

@@ -326,7 +326,7 @@ Run 'omnilab disk clean' to proceed.
 
 ### Automated Testing
 ```bash
-cd ~/netlab
+cd ~/omnilab
 pytest tests/test_enospc_handling.py -v
 
 # Expected output:

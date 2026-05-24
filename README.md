@@ -40,8 +40,8 @@ state, VM images).
 ## Running locally
 
 ```bash
-# Backend (Python venv lives at ~/netlab-env)
-source ~/netlab-env/bin/activate
+# Backend (Python venv lives at ~/omnilab-env)
+source ~/omnilab-env/bin/activate
 cd backend
 python main.py                 # listens on :5000
 
@@ -77,7 +77,7 @@ plus the smoke-test harness used to verify them — lives in
 To verify all templates end-to-end against the live docker daemon:
 
 ```bash
-~/netlab-env/bin/python ~/netlab/scripts/smoke_test_templates.py
+~/omnilab-env/bin/python ~/omnilab/scripts/smoke_test_templates.py
 ```
 
 This deploys each template, starts every node, verifies the containers are

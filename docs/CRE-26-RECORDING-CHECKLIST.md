@@ -27,7 +27,7 @@
 ### Step 1: Tag v1.0.0-rc.1
 
 ```bash
-cd ~/netlab
+cd ~/omnilab
 git tag -a v1.0.0-rc.1 -m "v1.0 Release Candidate 1
 
 Production hardening complete (CRE-51):
@@ -54,17 +54,17 @@ The script uses 3 pre-configured labs:
 # 1. Empty lab (for drag-drop demo)
 curl -X POST http://localhost:5000/api/labs/import \
   -H "Content-Type: application/json" \
-  -d @~/netlab/docs/demo-assets/seed-labs/empty.json
+  -d @~/omnilab/docs/demo-assets/seed-labs/empty.json
 
 # 2. Security stack (Kali + Wazuh + Suricata)
 curl -X POST http://localhost:5000/api/labs/import \
   -H "Content-Type: application/json" \
-  -d @~/netlab/docs/demo-assets/seed-labs/security-stack.json
+  -d @~/omnilab/docs/demo-assets/seed-labs/security-stack.json
 
 # 3. Networking triangle (3-router mesh)
 curl -X POST http://localhost:5000/api/labs/import \
   -H "Content-Type: application/json" \
-  -d @~/netlab/docs/demo-assets/seed-labs/networking-triangle.json
+  -d @~/omnilab/docs/demo-assets/seed-labs/networking-triangle.json
 ```
 
 ### Step 3: Clean Chrome profile

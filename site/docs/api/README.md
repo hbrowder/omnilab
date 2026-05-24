@@ -17,8 +17,8 @@ Both files are committed for static hosting, but they are **build artifacts**. S
 After any backend route change:
 
 ```bash
-cd ~/netlab
-~/netlab-env/bin/python scripts/build_api_docs.py
+cd ~/omnilab
+~/omnilab-env/bin/python scripts/build_api_docs.py
 git add site/docs/api/
 git commit -m "docs(api): regenerate (route X added/removed)"
 ```

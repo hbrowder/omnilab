@@ -249,7 +249,7 @@ async def stripe_webhook(request: Request):
             license_key = "OMNI-PEND-PEND-PEND-PEND"
             logger.error(
                 "License module unavailable; sent placeholder key to %s. "
-                "Check that ~/netlab/backend/api/license.py is deployed.",
+                "Check that ~/omnilab/backend/api/license.py is deployed.",
                 customer_email,
             )
 
