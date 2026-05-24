@@ -25,7 +25,7 @@ Status: pre-launch, v1.0 in active development. Tracking board:
 ## Repository layout
 
 ```
-netlab/
+omnilab/
 ├── backend/        FastAPI app — main.py + api/*.py routers, core/, services/
 ├── frontend/       Vite + React SPA — src/, dist/ (built bundle served by FastAPI)
 ├── docs/           Operator + developer docs
