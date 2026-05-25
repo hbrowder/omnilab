@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTopology, getLab, addNode, deleteNode } from '../utils/api'
+import { getTopology, getLab, addNode, deleteNode, getTextObjects, createTextObject, updateTextObject, deleteTextObject } from '../utils/api'
 import { useStore } from '../store'
 import { VENDORS, VENDOR_GROUPS, NodeIcon, VendorBadge } from '../components/VendorIcons'
 import NodePanel from '../components/NodePanel'
@@ -141,7 +141,7 @@ export default function LabCanvas() {
   const cbb=darkMode?'#334155':'#d1d5db'
 
   useEffect(()=>{
-    Promise.all([getLab(labId),getTopology(labId)]).then(([lr,tr])=>{
+    Promise.all([getLab(labId),getTopology(labId),getTextObjects(labId)]).then(([lr,tr,tor])=>{
       setActiveLab(lr.data)
       setLabName(lr.data.name)
       const topo=tr.data
@@ -160,6 +160,12 @@ export default function LabCanvas() {
         label:l.label||'',
         labelpos:l.labelpos!=null?l.labelpos:0.5,
         width:l.width||1.5
+      })))
+      // CRE-64: Load textobjects from API
+      setTexts(tor.data.map(obj=>({
+        id:obj.id,type:obj.type,x:obj.x,y:obj.y,
+        width:obj.width,height:obj.height,
+        fill:obj.fill,stroke:obj.stroke,text:obj.text||''
       })))
       setLoading(false)
     }).catch(()=>setLoading(false))
@@ -239,7 +245,7 @@ export default function LabCanvas() {
         // Only create shape if it's bigger than 10px (avoid accidental clicks)
         if(width > 10 || height > 10){
           const shapeId = 'shape-' + Date.now()
-          setTexts(p=>[...p,{
+          const newShape = {
             id:shapeId,
             type,
             x:Math.min(startX,endX),
@@ -249,7 +255,15 @@ export default function LabCanvas() {
             fill:drawFillColor,
             stroke:drawStrokeColor,
             text:'' // empty text for shapes
-          }])
+          }
+          setTexts(p=>[...p,newShape])
+          // CRE-64: Persist to database
+          createTextObject(labId, {
+            type, x: newShape.x, y: newShape.y,
+            width, height,
+            fill: drawFillColor, stroke: drawStrokeColor,
+            text: '', z_index: 0
+          }).catch(err=>console.error('Failed to save shape:', err))
         }
         setDrawingShape(null)
         return
@@ -258,7 +272,20 @@ export default function LabCanvas() {
       selBoxStart.current=null
       setSelBox(null)
       isPanning.current=false
-      if(draggingRef.current){ draggingRef.current=null; return }
+      if(draggingRef.current){
+        // CRE-64: Persist text object position after drag
+        if(draggingRef.current.kind === 'text'){
+          const draggedObj = texts.find(t => t.id === draggingRef.current.id)
+          if(draggedObj){
+            updateTextObject(labId, draggedObj.id, {
+              x: draggedObj.x,
+              y: draggedObj.y
+            }).catch(err=>console.error('Failed to update position:', err))
+          }
+        }
+        draggingRef.current=null
+        return
+      }
       if(connectingRef.current){
         const c=toCanvas(e.clientX,e.clientY)
         const tn=hitNode(c.x,c.y)
@@ -321,7 +348,14 @@ export default function LabCanvas() {
       if(drawingTool === 'text'){
         const text = prompt('Enter text:')
         if(text){
-          setTexts(p=>[...p,{id:'txt-'+Date.now(),text,x:cx,y:cy}])
+          const textId = 'txt-'+Date.now()
+          setTexts(p=>[...p,{id:textId,text,x:cx,y:cy,type:'text'}])
+          // CRE-64: Persist text annotation to database
+          createTextObject(labId, {
+            type: 'text', x: cx, y: cy,
+            text, fill: drawFillColor, stroke: drawStrokeColor,
+            z_index: 0
+          }).catch(err=>console.error('Failed to save text:', err))
         }
         return
       }
@@ -459,6 +493,21 @@ export default function LabCanvas() {
       {l:'- - Dashed',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'dashed'}:l));setContextMenu(null)}},
       {l:'··· Dotted',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'dotted'}:l));setContextMenu(null)}},
       {l:'🗑  Delete Link',col:'#dc2626',a:()=>{setLinks(p=>p.filter(l=>l.id!==item.link.id));setContextMenu(null)}},
+    ]
+    if(kind==='text')return[
+      {l:'✎  Edit Text',a:()=>{
+        const v=prompt('Edit text:',item.text?.text||'')
+        if(v!==null){
+          setTexts(p=>p.map(t=>t.id===item.text.id?{...t,text:v}:t))
+          updateTextObject(labId, item.text.id, {text:v}).catch(err=>console.error('Failed to update text:', err))
+        }
+        setContextMenu(null)
+      }},
+      {l:'🗑  Delete',col:'#dc2626',a:()=>{
+        setTexts(p=>p.filter(t=>t.id!==item.text.id))
+        deleteTextObject(labId, item.text.id).catch(err=>console.error('Failed to delete:', err))
+        setContextMenu(null)
+      }},
     ]
     return[]
   }
@@ -734,6 +783,7 @@ export default function LabCanvas() {
                     <rect key={t.id} x={t.x} y={t.y} width={t.width} height={t.height}
                       fill={t.fill} stroke={t.stroke} strokeWidth={2}
                       onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
+                      onContextMenu={e=>{e.preventDefault();e.stopPropagation();setContextMenu({x:e.clientX,y:e.clientY,kind:'text',text:t})}}
                       style={{cursor:'move'}}/>
                   )
                 } else if(t.type === 'circle'){
@@ -743,6 +793,7 @@ export default function LabCanvas() {
                       rx={t.width/2} ry={t.height/2}
                       fill={t.fill} stroke={t.stroke} strokeWidth={2}
                       onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
+                      onContextMenu={e=>{e.preventDefault();e.stopPropagation();setContextMenu({x:e.clientX,y:e.clientY,kind:'text',text:t})}}
                       style={{cursor:'move'}}/>
                   )
                 } else {
@@ -750,7 +801,8 @@ export default function LabCanvas() {
                   return (
                     <text key={t.id} x={t.x} y={t.y} fontSize={t.size||14} fill={tc} fontFamily="sans-serif"
                       onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
-                      onDoubleClick={()=>{const v=prompt('Edit:',t.text);if(v!==null)setTexts(p=>p.map(tx=>tx.id===t.id?{...tx,text:v}:tx))}} style={{cursor:'move'}}>{t.text}</text>
+                      onContextMenu={e=>{e.preventDefault();e.stopPropagation();setContextMenu({x:e.clientX,y:e.clientY,kind:'text',text:t})}}
+                      onDoubleClick={()=>{const v=prompt('Edit:',t.text);if(v!==null){setTexts(p=>p.map(tx=>tx.id===t.id?{...tx,text:v}:tx));updateTextObject(labId,t.id,{text:v}).catch(err=>console.error('Update failed:',err))}}} style={{cursor:'move'}}>{t.text}</text>
                   )
                 }
               })}

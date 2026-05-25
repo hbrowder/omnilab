@@ -36,4 +36,10 @@ export const provisionWsUrl = (nodeId) => {
   return `${proto}//${window.location.host}/api/nodes/${nodeId}/provision-ws`
 }
 
+// CRE-64: Drawing Tools - Text Objects API
+export const getTextObjects = (labId) => api.get(`/labs/${labId}/textobjects`)
+export const createTextObject = (labId, data) => api.post(`/labs/${labId}/textobjects`, data)
+export const updateTextObject = (labId, objId, data) => api.patch(`/labs/${labId}/textobjects/${objId}`, data)
+export const deleteTextObject = (labId, objId) => api.delete(`/labs/${labId}/textobjects/${objId}`)
+
 export default api

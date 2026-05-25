@@ -97,6 +97,29 @@ async def init_db():
             id INTEGER PRIMARY KEY CHECK (id = 1),
             key TEXT, tier TEXT DEFAULT 'free')""")
         await db.execute("INSERT OR IGNORE INTO license (id,tier) VALUES (1,'free')")
+        
+        # CRE-68: Traffic Filters (Phase 1: Foundation)
+        await db.execute("""CREATE TABLE IF NOT EXISTS traffic_filters (
+            id TEXT PRIMARY KEY, lab_id TEXT NOT NULL,
+            title TEXT NOT NULL, expr TEXT NOT NULL,
+            color TEXT NOT NULL DEFAULT '#00ff00', timeout INTEGER DEFAULT 5000,
+            enabled INTEGER DEFAULT 1, priority INTEGER DEFAULT 0,
+            created_at TEXT, updated_at TEXT,
+            FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE CASCADE)""")
+        await db.execute("""CREATE INDEX IF NOT EXISTS idx_filters_lab ON traffic_filters(lab_id)""")
+        await db.execute("""CREATE INDEX IF NOT EXISTS idx_filters_enabled ON traffic_filters(lab_id,enabled)""")
+        
+        # CRE-64: Drawing Tools - Text Objects (rectangles, circles, text annotations)
+        await db.execute("""CREATE TABLE IF NOT EXISTS textobjects (
+            id TEXT PRIMARY KEY, lab_id TEXT NOT NULL,
+            type TEXT NOT NULL, x REAL NOT NULL, y REAL NOT NULL,
+            width REAL, height REAL,
+            fill TEXT DEFAULT 'rgba(88,166,255,0.3)', stroke TEXT DEFAULT 'rgba(88,166,255,1)',
+            text TEXT DEFAULT '', z_index INTEGER DEFAULT 0,
+            created_at TEXT, updated_at TEXT,
+            FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE CASCADE)""")
+        await db.execute("""CREATE INDEX IF NOT EXISTS idx_textobjects_lab ON textobjects(lab_id)""")
+        
         # CRE-15: first-run wizard + admin auth state. Single-row settings
         # row, k/v columns. New fields are added as plain ALTER TABLEs below
         # so existing installs don't lose state on upgrade.
