@@ -54,18 +54,18 @@ npm install
 npm run dev                    # listens on :5173
 ```
 
-**⚠️ Security Notice (v1.0):**  
-OmniLab v1.0 has **no authentication**. It is designed for **localhost-only** single-user deployments (similar to EVE-NG Community Edition). Do NOT expose port 5000 to:
-- The internet (public IP)
-- Your LAN (0.0.0.0 binding without firewall)
-- Untrusted users
+**⚠️ Security Notice:**  
+OmniLab v1.0 ships with **JWT-based multi-user authentication** (CRE-53). Three roles: admin, power-user, readonly. See [docs/MIGRATION.md](docs/MIGRATION.md) for setup.
 
-Multi-user authentication is coming in **v1.1**. For now, treat OmniLab like a local development tool.
+For localhost-only testing, you can run without auth. **Never** expose port 5000 to the internet without authentication enabled.
 
 Health check: `curl http://localhost:5000/api/system/health`
 
 **Production Deployment:**  
 NAT networks and packet capture require `CAP_NET_ADMIN` privileges. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Docker/Kubernetes/bare-metal setup.
+
+**Migrating from EVE-NG or GNS3?**  
+See [docs/MIGRATION.md](docs/MIGRATION.md) for automated migration tools. **No more manual `fixpermissions` commands!** OmniLab API handles permissions automatically.
 
 ---
 
