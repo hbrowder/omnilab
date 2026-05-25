@@ -8,6 +8,11 @@ CRE-56: Provides internet access to lab nodes via NAT
 - Health checks for connectivity
 
 Development mode: Set OMNILAB_MOCK_NETWORK=1 to skip real infrastructure
+
+Production deployment requires network admin privileges:
+- Docker: Run container with --cap-add=NET_ADMIN
+- Kubernetes: Set securityContext.capabilities.add: ["NET_ADMIN"]
+- Bare metal: sudo setcap cap_net_admin+ep /path/to/python OR run as root
 """
 import asyncio
 import ipaddress

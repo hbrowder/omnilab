@@ -64,6 +64,9 @@ Multi-user authentication is coming in **v1.1**. For now, treat OmniLab like a l
 
 Health check: `curl http://localhost:5000/api/system/health`
 
+**Production Deployment:**  
+NAT networks and packet capture require `CAP_NET_ADMIN` privileges. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Docker/Kubernetes/bare-metal setup.
+
 ---
 
 ## Lab templates
