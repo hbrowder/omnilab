@@ -143,8 +143,15 @@ export default function LabCanvas() {
         status:n.status||'stopped',image:n.image
       })))
       setLinks(topo.links.map(l=>({
-        id:l.id,srcId:l.src_node_id,dstId:l.dst_node_id,
-        srcIface:'GigabitEthernet0/0',dstIface:'eth0',style:'solid'
+        id:l.id,srcId:l.src_node_id,dstId:l.dst_node_id,netId:l.network_id,
+        srcIface:l.src_interface||'GigabitEthernet0/0',
+        dstIface:l.dst_interface||'eth0',
+        color:l.color||null,
+        style:l.style||'Solid',
+        linkstyle:l.linkstyle||'Straight',
+        label:l.label||'',
+        labelpos:l.labelpos!=null?l.labelpos:0.5,
+        width:l.width||1.5
       })))
       setLoading(false)
     }).catch(()=>setLoading(false))
@@ -465,17 +472,38 @@ export default function LabCanvas() {
                 if(!src||!dstObj)return null
                 const sx=src.x+24,sy=src.y+24
                 const dx=dstObj.x+(net?30:24),dy=dstObj.y+(net?25:24)
+                
+                // CRE-66: Link styling
+                const linkColor = link.color || (darkMode?'#475569':'#9ca3af')
+                const linkWidth = link.width || 1.5
+                const dash = link.style==='Dashed'?'8,4':undefined
+                
+                // Path generation based on linkstyle
+                let pathD = `M${sx},${sy} L${dx},${dy}` // Default: Straight
+                if(link.linkstyle==='Bezier'){
+                  const midX=(sx+dx)/2, midY=(sy+dy)/2
+                  const perpX=-(dy-sy)/4, perpY=(dx-sx)/4
+                  const cp1x=midX+perpX, cp1y=midY+perpY
+                  pathD=`M${sx},${sy} Q${cp1x},${cp1y} ${dx},${dy}`
+                }else if(link.linkstyle==='Flowchart'){
+                  const midX=(sx+dx)/2
+                  pathD=`M${sx},${sy} L${midX},${sy} L${midX},${dy} L${dx},${dy}`
+                }
+                
                 const angle=Math.atan2(dy-sy,dx-sx)*180/Math.PI
-                const dash=link.style==='dashed'?'8,4':link.style==='dotted'?'2,4':undefined
-                const lc=darkMode?'#475569':'#9ca3af'
                 const d=58
                 const sxe=sx+Math.cos(angle*Math.PI/180)*d, sye=sy+Math.sin(angle*Math.PI/180)*d
                 const dxe=dx-Math.cos(angle*Math.PI/180)*d, dye=dy-Math.sin(angle*Math.PI/180)*d
                 const rot=angle>90||angle<-90?angle+180:angle
+                
+                // Label midpoint calculation
+                const labelX=sx+(dx-sx)*link.labelpos
+                const labelY=sy+(dy-sy)*link.labelpos
+                
                 return(
                   <g key={link.id} style={{cursor:'context-menu'}} onContextMenu={e=>onLinkRightClick(e,link)}>
-                    <line x1={sx} y1={sy} x2={dx} y2={dy} stroke={lc} strokeWidth="1.5" strokeDasharray={dash}/>
-                    <line x1={sx} y1={sy} x2={dx} y2={dy} stroke="transparent" strokeWidth="14"/>
+                    <path d={pathD} stroke={linkColor} strokeWidth={linkWidth} strokeDasharray={dash} fill="none"/>
+                    <path d={pathD} stroke="transparent" strokeWidth="14" fill="none"/>
                     {!hideLabels&&<>
                       <text x={sxe} y={sye} textAnchor="middle" fontSize="8" fill={darkMode?'#60a5fa':'#2563eb'} fontFamily="monospace"
                         transform={`rotate(${rot},${sxe},${sye})`}>
@@ -485,6 +513,12 @@ export default function LabCanvas() {
                         transform={`rotate(${rot},${dxe},${dye})`}>
                         {link.dstIface.replace('GigabitEthernet','Gi').replace('FastEthernet','Fa')}
                       </text>
+                      {link.label&&(
+                        <text x={labelX} y={labelY-8} textAnchor="middle" fontSize="10" fill={linkColor} fontWeight="600" fontFamily="sans-serif"
+                          transform={`rotate(${rot},${labelX},${labelY-8})`}>
+                          {link.label}
+                        </text>
+                      )}
                     </>}
                   </g>
                 )

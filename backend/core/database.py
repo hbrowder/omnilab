@@ -38,6 +38,22 @@ async def init_db():
             src_node_id TEXT NOT NULL, dst_node_id TEXT NOT NULL,
             created_at TEXT,
             FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE CASCADE)""")
+        # CRE-66: Link styling (colors, labels, interface names)
+        for ddl in (
+            "ALTER TABLE links ADD COLUMN src_interface TEXT",
+            "ALTER TABLE links ADD COLUMN dst_interface TEXT",
+            "ALTER TABLE links ADD COLUMN color TEXT",
+            "ALTER TABLE links ADD COLUMN style TEXT DEFAULT 'Solid'",
+            "ALTER TABLE links ADD COLUMN linkstyle TEXT DEFAULT 'Straight'",
+            "ALTER TABLE links ADD COLUMN label TEXT",
+            "ALTER TABLE links ADD COLUMN labelpos REAL DEFAULT 0.5",
+            "ALTER TABLE links ADD COLUMN width REAL DEFAULT 1.5",
+        ):
+            try:
+                await db.execute(ddl)
+            except Exception:
+                # Column already exists
+                pass
         # CRE-56: NAT networks for internet access
         await db.execute("""CREATE TABLE IF NOT EXISTS networks (
             id TEXT PRIMARY KEY, lab_id TEXT NOT NULL,
