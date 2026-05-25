@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { updateNodeConfig, getNodeWebInfo, provisionWsUrl } from '../utils/api'
+import Modal from './Modal'
 
 /**
  * NodePanel — right-rail inspector for a selected node.
@@ -26,6 +27,9 @@ export default function NodePanel({ node, labId, onDelete, onClose, onStart, onS
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [activeTab, setActiveTab] = useState('info')
+
+  // CRE-67: In-canvas web UI modal (replaces window.open)
+  const [showWebUI, setShowWebUI] = useState(false)
 
   // CRE-39: web-info (Open Web UI button) ----------------------------------
   const [webInfo, setWebInfo] = useState(null)
@@ -131,7 +135,7 @@ export default function NodePanel({ node, labId, onDelete, onClose, onStart, onS
 
   const handleOpenWebUI = () => {
     if (!webInfo?.proxy_url) return
-    window.open(webInfo.proxy_url, '_blank', 'noopener,noreferrer')
+    setShowWebUI(true)  // CRE-67: Open in-canvas modal instead of popup
   }
 
   // ----- pull-progress render helpers --------------------------------------
@@ -156,6 +160,7 @@ export default function NodePanel({ node, labId, onDelete, onClose, onStart, onS
   })()
 
   return (
+    <>
     <div style={{ width:300, background:'#161b22', borderLeft:'1px solid #21262d', padding:16, display:'flex', flexDirection:'column', gap:12, flexShrink:0, overflowY:'auto' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <span style={{ fontSize:14, fontWeight:600, color:'#e6edf3' }}>Node Inspector</span>
@@ -275,7 +280,13 @@ export default function NodePanel({ node, labId, onDelete, onClose, onStart, onS
           <textarea
             value={config}
             onChange={e=>setConfig(e.target.value)}
-            placeholder={'# Example for Docker:\n# environment variables, startup commands\n#\n# Example for Cisco:\n# interface GigabitEthernet0/0\n#  ip address 10.1.1.1 255.255.255.0\n#  no shutdown'}
+            placeholder={`# Example for Docker:
+# environment variables, startup commands
+#
+# Example for Cisco:
+# interface GigabitEthernet0/0
+#  ip address 10.1.1.1 255.255.255.0
+#  no shutdown`}
             style={{
               background:'#0d1117', border:'1px solid #21262d', color:'#e6edf3',
               padding:'10px', borderRadius:6, fontSize:12, fontFamily:'monospace',
@@ -296,5 +307,31 @@ export default function NodePanel({ node, labId, onDelete, onClose, onStart, onS
         </div>
       )}
     </div>
+
+    {/* CRE-67: In-canvas Web UI modal (replaces window.open popup) */}
+    <Modal
+      open={showWebUI}
+      onClose={() => setShowWebUI(false)}
+      title={`${data.label || node.id} - Web UI`}
+      width={1200}
+    >
+      <div style={{ width: '100%', height: '70vh', display: 'flex', flexDirection: 'column' }}>
+        <iframe
+          src={webInfo?.proxy_url}
+          style={{
+            width: '100%',
+            height: '100%',
+            border: '1px solid #30363d',
+            borderRadius: 6,
+            background: '#fff'
+          }}
+          title={`${data.label} Web UI`}
+        />
+        <div style={{ marginTop: 8, fontSize: 11, color: '#8b949e' }}>
+          URL: {webInfo?.proxy_url}
+        </div>
+      </div>
+    </Modal>
+    </>
   )
 }
