@@ -13,7 +13,7 @@ import asyncio
 import subprocess
 import re
 import time
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, List
 from dataclasses import dataclass, field
 from threading import Thread, Lock
 
@@ -33,6 +33,10 @@ class CaptureSession:
     interface_to_link: Dict[str, str] = field(default_factory=dict)  # interface → link_id
     packet_count: int = 0
     active: bool = True
+    # Batching fields for throttling WebSocket events
+    pending_events: List[Dict] = field(default_factory=list)
+    last_batch_time: float = field(default_factory=lambda: time.time())
+    batch_interval: float = 0.1  # Send batches every 100ms
 
 
 class TrafficService:
@@ -172,6 +176,12 @@ class TrafficService:
             # Mark inactive
             session.active = False
             
+            # Get event loop for final flush
+            loop = asyncio.get_running_loop()
+            
+            # Flush any remaining pending events before stopping
+            self._flush_batch(session, loop)
+            
             # Terminate all processes
             for iface, process in session.processes.items():
                 try:
@@ -226,13 +236,23 @@ class TrafficService:
                 # Increment packet counter
                 session.packet_count += 1
                 
-                # Emit traffic match event
-                schedule_coro(send_traffic_match(
-                    lab_id=session.lab_id,
-                    filter_id=session.filter_id,
-                    link_id=link_id,  # We KNOW it's from this container:interface
-                    packet_summary=f"{container_name.split('-')[-1][:8]}:{interface}: {line[:80]}"
-                ))
+                # Queue event instead of sending immediately
+                event = {
+                    "lab_id": session.lab_id,
+                    "filter_id": session.filter_id,
+                    "link_id": link_id,
+                    "packet_summary": f"{container_name.split('-')[-1][:8]}:{interface}: {line[:80]}"
+                }
+                
+                # Thread-safe batching with lock
+                with self._lock:
+                    session.pending_events.append(event)
+                    
+                    # Flush batch if interval elapsed
+                    now = time.time()
+                    if now - session.last_batch_time >= session.batch_interval:
+                        self._flush_batch(session, loop)
+                        session.last_batch_time = now
         
         except Exception as e:
             if session.active:
@@ -241,6 +261,31 @@ class TrafficService:
                     f"Capture error on {key}: {e}", 
                     session.filter_id
                 ))
+    
+    def _flush_batch(self, session: CaptureSession, loop):
+        """
+        Flush pending events for a session.
+        Sends up to 20 events per flush to avoid massive bursts.
+        """
+        if not session.pending_events:
+            return
+        
+        # Send up to 20 events per batch (prevent massive bursts)
+        batch = session.pending_events[:20]
+        session.pending_events = session.pending_events[20:]
+        
+        # Import here to avoid circular dependency
+        from api.traffic_websocket import send_traffic_batch
+        
+        # Send the entire batch as ONE WebSocket message
+        future = asyncio.run_coroutine_threadsafe(
+            send_traffic_batch(session.lab_id, batch),
+            loop
+        )
+        try:
+            future.result(timeout=0.5)
+        except Exception as e:
+            print(f"Failed to send batched events: {e}")
     
     def get_active_filters(self) -> Set[str]:
         """Get set of active filter IDs."""

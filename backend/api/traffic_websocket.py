@@ -177,6 +177,16 @@ async def send_traffic_match(lab_id: str, filter_id: str, link_id: str, packet_s
     })
 
 
+async def send_traffic_batch(lab_id: str, events: list[dict]):
+    """Send a batch of traffic_match events as a single message."""
+    await ConnectionManager.broadcast(lab_id, {
+        "type": "traffic_batch",
+        "events": events,
+        "count": len(events),
+        "timestamp": asyncio.get_event_loop().time()
+    })
+
+
 async def send_packet_count_update(lab_id: str, filter_id: str, count: int):
     """Send updated packet count for a filter."""
     await ConnectionManager.broadcast(lab_id, {
