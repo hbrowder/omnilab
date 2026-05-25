@@ -1,4 +1,4 @@
-# CRE-68: Traffic Filter API (Phase 1)
+# CRE-68: Traffic Filter API (Phase 1 + Phase 3 Milestone 2)
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -7,6 +7,7 @@ from datetime import datetime
 import aiosqlite
 
 from core.database import get_db
+from services.traffic_service import get_traffic_service  # CRE-68 Phase 3
 
 router = APIRouter(prefix="/api/labs", tags=["traffic-filters"])
 
@@ -93,12 +94,24 @@ async def get_filter(
 
 @router.patch("/{lab_id}/filters/{filter_id}")
 async def update_filter(
-    lab_id: str,
-    filter_id: str,
+    lab_id: str, 
+    filter_id: str, 
     filter_data: TrafficFilterUpdate,
     db: aiosqlite.Connection = Depends(get_db)
 ):
     """Update a traffic filter"""
+    # Get current filter state before update
+    async with db.execute(
+        "SELECT enabled, expr, color FROM traffic_filters WHERE id=? AND lab_id=?",
+        (filter_id, lab_id)
+    ) as cursor:
+        old_row = await cursor.fetchone()
+        if not old_row:
+            raise HTTPException(status_code=404, detail="Filter not found")
+        old_enabled = bool(old_row[0])
+        old_expr = old_row[1]
+        old_color = old_row[2]
+    
     # Build dynamic UPDATE query
     updates = []
     values = []
@@ -125,6 +138,28 @@ async def update_filter(
     if db.total_changes == 0:
         raise HTTPException(status_code=404, detail="Filter not found")
     
+    # CRE-68 Phase 3: Restart capture if expression or state changed
+    traffic_service = get_traffic_service()
+    update_dict = filter_data.dict(exclude_unset=True)
+    
+    # Get new values (use updated if provided, else old)
+    new_enabled = update_dict.get('enabled', old_enabled)
+    new_expr = update_dict.get('expr', old_expr)
+    new_color = update_dict.get('color', old_color)
+    
+    # If expression changed or state changed, restart capture
+    if old_enabled and (new_expr != old_expr or new_color != old_color):
+        # Restart with new expression/color
+        await traffic_service.stop_capture(filter_id)
+        if new_enabled:
+            await traffic_service.start_capture(lab_id, filter_id, new_expr, new_color)
+    elif 'enabled' in update_dict:
+        # State changed
+        if new_enabled:
+            await traffic_service.start_capture(lab_id, filter_id, new_expr, new_color)
+        else:
+            await traffic_service.stop_capture(filter_id)
+    
     # Return updated filter
     return await get_filter(lab_id, filter_id, db)
 
@@ -144,6 +179,10 @@ async def delete_filter(
     if db.total_changes == 0:
         raise HTTPException(status_code=404, detail="Filter not found")
     
+    # CRE-68 Phase 3: Stop capture if it was running
+    traffic_service = get_traffic_service()
+    await traffic_service.stop_capture(filter_id)
+    
     return {"status": "deleted", "id": filter_id}
 
 @router.post("/{lab_id}/filters/{filter_id}/toggle")
@@ -153,20 +192,34 @@ async def toggle_filter(
     db: aiosqlite.Connection = Depends(get_db)
 ):
     """Toggle a filter's enabled state"""
+    # Get current filter state
     async with db.execute(
-        "SELECT enabled FROM traffic_filters WHERE id=? AND lab_id=?",
+        "SELECT enabled, expr, color FROM traffic_filters WHERE id=? AND lab_id=?",
         (filter_id, lab_id)
     ) as cursor:
         row = await cursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Filter not found")
         
-        new_state = not bool(row[0])
+        current_enabled = bool(row[0])
+        expr = row[1]
+        color = row[2]
+        new_state = not current_enabled
     
+    # Update database
     await db.execute(
         "UPDATE traffic_filters SET enabled=?, updated_at=? WHERE id=? AND lab_id=?",
         (int(new_state), datetime.utcnow().isoformat(), filter_id, lab_id)
     )
     await db.commit()
+    
+    # CRE-68 Phase 3: Start/stop packet capture
+    traffic_service = get_traffic_service()
+    if new_state:
+        # Start capture
+        await traffic_service.start_capture(lab_id, filter_id, expr, color)
+    else:
+        # Stop capture
+        await traffic_service.stop_capture(filter_id)
     
     return {"enabled": new_state}

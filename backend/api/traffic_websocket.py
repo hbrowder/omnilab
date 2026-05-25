@@ -145,7 +145,7 @@ async def traffic_websocket(websocket: WebSocket, lab_id: str):
 
 # Utility functions for other modules to send events
 
-async def send_filter_activated(lab_id: str, filter_id: int, name: str, color: str, duration: int):
+async def send_filter_activated(lab_id: str, filter_id: str, name: str, color: str, duration: int):
     """Notify clients that a filter was activated."""
     await ConnectionManager.broadcast(lab_id, {
         "type": "filter_activated",
@@ -157,7 +157,7 @@ async def send_filter_activated(lab_id: str, filter_id: int, name: str, color: s
     })
 
 
-async def send_filter_deactivated(lab_id: str, filter_id: int):
+async def send_filter_deactivated(lab_id: str, filter_id: str):
     """Notify clients that a filter was deactivated."""
     await ConnectionManager.broadcast(lab_id, {
         "type": "filter_deactivated",
@@ -166,7 +166,7 @@ async def send_filter_deactivated(lab_id: str, filter_id: int):
     })
 
 
-async def send_traffic_match(lab_id: str, filter_id: int, link_id: str, packet_summary: str = ""):
+async def send_traffic_match(lab_id: str, filter_id: str, link_id: str, packet_summary: str = ""):
     """Notify clients of a packet match on a specific link."""
     await ConnectionManager.broadcast(lab_id, {
         "type": "traffic_match",
@@ -177,7 +177,7 @@ async def send_traffic_match(lab_id: str, filter_id: int, link_id: str, packet_s
     })
 
 
-async def send_packet_count_update(lab_id: str, filter_id: int, count: int):
+async def send_packet_count_update(lab_id: str, filter_id: str, count: int):
     """Send updated packet count for a filter."""
     await ConnectionManager.broadcast(lab_id, {
         "type": "packet_count_update",
@@ -187,7 +187,7 @@ async def send_packet_count_update(lab_id: str, filter_id: int, count: int):
     })
 
 
-async def send_error(lab_id: str, message: str, filter_id: int | None = None):
+async def send_error(lab_id: str, message: str, filter_id: str | None = None):
     """Send error message to clients."""
     event = {
         "type": "error",
