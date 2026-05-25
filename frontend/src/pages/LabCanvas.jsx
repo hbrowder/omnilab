@@ -5,6 +5,7 @@ import { useStore } from '../store'
 import { VENDORS, VENDOR_GROUPS, NodeIcon, VendorBadge } from '../components/VendorIcons'
 import NodePanel from '../components/NodePanel'
 import DrawingToolbar from '../components/DrawingToolbar'
+import TrafficFilterPanel from '../components/TrafficFilterPanel'
 
 const IFACES = ['GigabitEthernet0/0','GigabitEthernet0/1','GigabitEthernet0/2','GigabitEthernet0/3','FastEthernet0/0','FastEthernet0/1','eth0','eth1','eth2','eth3','mgmt0','Loopback0']
 const NET_DEFS = {
@@ -95,6 +96,7 @@ export default function LabCanvas() {
   const [darkMode, setDarkMode] = useState(false)
   const [hideLabels, setHideLabels] = useState(false)
   const [showMinimap, setShowMinimap] = useState(true)
+  const [showTrafficFilters, setShowTrafficFilters] = useState(false) // CRE-68
   const [selBox, setSelBox] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
   const [zoom, setZoom] = useState(1)
@@ -546,6 +548,7 @@ export default function LabCanvas() {
             {ic:'⊕',tip:'Add Node',fn:()=>setAddNodeModal({x:300,y:200})},
             {ic:'⊞',tip:'Add Network',fn:()=>setAddNetModal({x:300,y:200})},
             {ic:'T',tip:'Add Text',fn:()=>{const t=prompt('Text:');if(t)setTexts(p=>[...p,{id:'txt-'+Date.now(),text:t,x:200,y:200}])}},
+            {ic:'📊',tip:'Traffic Filters',fn:()=>setShowTrafficFilters(s=>!s)}, // CRE-68
             {ic:'↺',tip:'Refresh',fn:()=>window.location.reload()},
             {ic:'⤢',tip:'Reset View',fn:()=>{panRef.current={x:80,y:40};setPan({x:80,y:40});zoomRef.current=1;setZoom(1)}},
             {ic:'▦',tip:'Minimap',fn:()=>setShowMinimap(m=>!m)},
@@ -1104,6 +1107,14 @@ export default function LabCanvas() {
             }}
           />
         </div>
+      )}
+      {/* CRE-68: Traffic Filter Panel */}
+      {showTrafficFilters && (
+        <TrafficFilterPanel
+          labId={labId}
+          darkMode={darkMode}
+          onClose={()=>setShowTrafficFilters(false)}
+        />
       )}
     </div>
   )
