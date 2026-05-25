@@ -28,8 +28,9 @@ class CaptureSession:
     lab_id: str
     expression: str  # BPF filter expression
     color: str
-    process: subprocess.Popen
-    thread: Optional[Thread] = None
+    processes: Dict[str, subprocess.Popen] = field(default_factory=dict)  # interface → process
+    threads: Dict[str, Thread] = field(default_factory=dict)  # interface → reader thread
+    interface_to_link: Dict[str, str] = field(default_factory=dict)  # interface → link_id
     packet_count: int = 0
     active: bool = True
 
@@ -43,7 +44,10 @@ class TrafficService:
     
     async def start_capture(self, lab_id: str, filter_id: str, expression: str, color: str):
         """
-        Start packet capture for a filter.
+        Start per-container packet capture for a filter.
+        
+        Uses 'docker exec <container> tcpdump -i <interface>' to capture traffic
+        inside container namespaces where the interfaces actually exist.
         
         Args:
             lab_id: Lab identifier
@@ -57,66 +61,109 @@ class TrafficService:
                 await self.stop_capture(filter_id)
             
             try:
-                # Get the current running event loop to pass to the thread
+                # Get the current running event loop to pass to threads
                 loop = asyncio.get_running_loop()
                 
-                # Start tcpdump process
-                # -i any: capture on all interfaces
-                # -n: don't resolve hostnames
-                # -l: line buffered output
-                # -tt: timestamp as Unix epoch
-                # -e: print link-level header (includes interface)
-                cmd = [
-                    'tcpdump',
-                    '-i', 'any',
-                    '-n',
-                    '-l',
-                    '-tt',
-                    '-e',
-                    expression
-                ]
+                # Get container-interface mappings from topology
+                mapper = get_topology_mapper()
+                container_interface_map = mapper.get_container_interfaces(lab_id)
                 
-                process = subprocess.Popen(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL,
-                    text=True,
-                    bufsize=1  # Line buffered
-                )
+                if not container_interface_map:
+                    await send_error(lab_id, f"No container interfaces found for lab {lab_id}", filter_id)
+                    return
                 
                 # Create session
                 session = CaptureSession(
                     filter_id=filter_id,
                     lab_id=lab_id,
                     expression=expression,
-                    color=color,
-                    process=process,
-                    thread=None  # Set below
+                    color=color
                 )
                 
-                # Start reader thread (pass event loop)
-                thread = Thread(
-                    target=self._read_packets,
-                    args=(session, loop),
-                    daemon=True
-                )
-                session.thread = thread
-                thread.start()
+                # Build link_id lookup by (container, interface)
+                # This allows _read_packets_from_interface to quickly find link_id
+                session.interface_to_link = {
+                    f"{container}:{iface}": link_id 
+                    for (container, iface), link_id in container_interface_map.items()
+                }
+                
+                # Start one tcpdump per (container, interface) pair
+                for (container_name, interface), link_id in container_interface_map.items():
+                    try:
+                        # docker exec -t <container> tcpdump -i <interface> -n -l <expression>
+                        # Note: -t flag allocates pseudo-TTY so stdout/stderr work properly
+                        cmd = [
+                            'docker', 'exec',
+                            '-t',  # Allocate pseudo-TTY for proper stdout capture
+                            container_name,
+                            'tcpdump',
+                            '-i', interface,
+                            '-n',         # Don't resolve hostnames
+                            '-l',         # Line buffered output
+                            '-tt',        # Timestamp as Unix epoch
+                            expression
+                        ]
+                        
+                        process = subprocess.Popen(
+                            cmd,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            text=True,
+                            bufsize=1  # Line buffered
+                        )
+                        
+                        # Check if process died immediately (container not running, permission error, etc.)
+                        time.sleep(0.05)
+                        if process.poll() is not None:
+                            stderr = process.stderr.read() if process.stderr else ""
+                            # Clean up already-started processes
+                            for p in session.processes.values():
+                                p.kill()
+                            
+                            if "No such container" in stderr:
+                                raise RuntimeError(
+                                    f"Container {container_name} not running. "
+                                    f"Start the lab nodes before enabling traffic filters."
+                                )
+                            else:
+                                raise RuntimeError(
+                                    f"tcpdump failed in {container_name} on {interface}. "
+                                    f"Error: {stderr[:200]}"
+                                )
+                        
+                        # Use container:interface as key
+                        key = f"{container_name}:{interface}"
+                        session.processes[key] = process
+                        
+                        # Start reader thread for this container-interface pair
+                        thread = Thread(
+                            target=self._read_packets_from_interface,
+                            args=(session, container_name, interface, loop),
+                            daemon=True
+                        )
+                        thread.start()
+                        session.threads[key] = thread
+                        
+                    except Exception as e:
+                        # Clean up already-started processes
+                        for p in session.processes.values():
+                            p.kill()
+                        raise RuntimeError(f"Failed to start capture on {container_name}:{interface}: {e}")
                 
                 self._sessions[filter_id] = session
                 
-                # Notify activation (name=expression, duration=10000ms for 10s flash)
+                # Notify activation
                 await send_filter_activated(lab_id, filter_id, expression, color, 10000)
                 
             except FileNotFoundError:
-                await send_error(lab_id, "tcpdump not found - install with: apt-get install tcpdump", filter_id)
+                await send_error(lab_id, "docker or tcpdump not found", filter_id)
             except PermissionError:
-                await send_error(lab_id, "Permission denied - tcpdump requires root or CAP_NET_RAW capability", filter_id)
+                await send_error(lab_id, "Permission denied - check Docker daemon access", filter_id)
             except Exception as e:
                 await send_error(lab_id, f"Failed to start capture: {e}", filter_id)
     
     async def stop_capture(self, filter_id: str):
-        """Stop packet capture for a filter."""
+        """Stop packet capture for a filter (all interfaces)."""
         with self._lock:
             session = self._sessions.pop(filter_id, None)
             if not session:
@@ -125,45 +172,50 @@ class TrafficService:
             # Mark inactive
             session.active = False
             
-            # Terminate process
-            try:
-                session.process.terminate()
-                session.process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                session.process.kill()
-            except Exception:
-                pass
+            # Terminate all processes
+            for iface, process in session.processes.items():
+                try:
+                    process.terminate()
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                except Exception:
+                    pass
+            
+            # Wait for threads to finish
+            for thread in session.threads.values():
+                thread.join(timeout=1)
             
             # Notify deactivation
             await send_filter_deactivated(session.lab_id, filter_id)
     
-    def _read_packets(self, session: CaptureSession, loop):
+    def _read_packets_from_interface(self, session: CaptureSession, container_name: str, interface: str, loop):
         """
-        Read packets from tcpdump output (runs in background thread).
-        
-        tcpdump -i any -n -l -tt -e output format:
-        1234567890.123456 In 00:00:00:00:00:00 ethertype IPv4 (0x0800), length 74: 192.168.1.1.22 > 192.168.1.2.12345: ...
+        Read packets from tcpdump running inside a container (runs in background thread).
         
         Args:
-            session: CaptureSession with process and metadata
+            session: CaptureSession with processes and metadata
+            container_name: Container name (e.g., "omnilab-209b6bf7...")
+            interface: Interface name inside container (e.g., "eth0")
             loop: asyncio event loop to schedule coroutines on
         """
-        mapper = get_topology_mapper()
+        key = f"{container_name}:{interface}"
+        process = session.processes.get(key)
+        if not process or not process.stdout:
+            return
         
-        # Get topology mapping
-        interface_map = mapper.get_all_interfaces(session.lab_id)
-        
-        # Packet counter for batching
-        packet_buffer = []
-        last_update = time.time()
-        UPDATE_INTERVAL = 1.0  # Batch updates every 1 second
+        # Get link_id for this container:interface pair
+        link_id = session.interface_to_link.get(key)
+        if not link_id:
+            print(f"Warning: No link_id found for {key}, skipping capture")
+            return
         
         def schedule_coro(coro):
             """Schedule a coroutine on the main event loop from this thread"""
             asyncio.run_coroutine_threadsafe(coro, loop)
         
         try:
-            for line in session.process.stdout:
+            for line in process.stdout:
                 if not session.active:
                     break
                 
@@ -171,61 +223,24 @@ class TrafficService:
                 if not line:
                     continue
                 
-                # Parse tcpdump output
-                # Format: timestamp direction mac ethertype, length N: packet_info
-                # Example: 1234567890.123456 In 00:00:00:00:00:00 ethertype IPv4 (0x0800), length 74: ...
+                # Increment packet counter
+                session.packet_count += 1
                 
-                # Extract interface from direction (In/Out on interface_name)
-                # tcpdump -i any adds direction: "In" or "Out"
-                # We need to parse more carefully - tcpdump -i any doesn't show interface name directly
-                # Better approach: use -Q in/out and parse the interface from context
-                
-                # For now, try to extract link_id from any interface hints in the packet
-                # Real production would need better interface detection or use per-interface captures
-                
-                link_id = None
-                
-                # Try to find interface hints in the packet line
-                # This is a simplified approach - production needs better parsing
-                for iface_name, iface_link_id in interface_map.items():
-                    if iface_name in line or iface_name.replace(':', '_') in line:
-                        link_id = iface_link_id
-                        break
-                
-                # If we can't determine link, use a default/random link for demo
-                # In production, we'd need per-interface tcpdump or better parsing
-                if link_id is None and interface_map:
-                    # Use first link as fallback for demo
-                    link_id = next(iter(interface_map.values()))
-                
-                if link_id is not None:
-                    session.packet_count += 1
-                    packet_buffer.append(link_id)
-                    
-                    # Emit individual traffic match event (throttled)
-                    if len(packet_buffer) <= 10:  # Only emit first 10 per batch to avoid spam
-                        schedule_coro(send_traffic_match(
-                            lab_id=session.lab_id,
-                            filter_id=session.filter_id,
-                            link_id=str(link_id),
-                            packet_summary=f"Filter {session.filter_id} match"
-                        ))
-                
-                # Batch update packet counts
-                now = time.time()
-                if now - last_update >= UPDATE_INTERVAL:
-                    if packet_buffer:
-                        schedule_coro(send_packet_count_update(
-                            lab_id=session.lab_id,
-                            filter_id=session.filter_id,
-                            count=session.packet_count
-                        ))
-                        packet_buffer.clear()
-                        last_update = now
+                # Emit traffic match event
+                schedule_coro(send_traffic_match(
+                    lab_id=session.lab_id,
+                    filter_id=session.filter_id,
+                    link_id=link_id,  # We KNOW it's from this container:interface
+                    packet_summary=f"{container_name.split('-')[-1][:8]}:{interface}: {line[:80]}"
+                ))
         
         except Exception as e:
             if session.active:
-                schedule_coro(send_error(session.lab_id, f"Capture error: {e}", session.filter_id))
+                schedule_coro(send_error(
+                    session.lab_id, 
+                    f"Capture error on {key}: {e}", 
+                    session.filter_id
+                ))
     
     def get_active_filters(self) -> Set[str]:
         """Get set of active filter IDs."""

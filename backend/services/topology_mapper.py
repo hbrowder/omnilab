@@ -24,7 +24,7 @@ class TopologyMapper:
         self.db_path: str = db_path
         self._topology_cache = {}  # {lab_id: {interface_name: link_id}}
     
-    def get_link_id_for_interface(self, lab_id: str, interface: str) -> Optional[int]:
+    def get_link_id_for_interface(self, lab_id: str, interface: str) -> Optional[str]:
         """
         Get link_id for a network interface.
         
@@ -147,11 +147,61 @@ class TopologyMapper:
         else:
             self._topology_cache.clear()
     
-    def get_all_interfaces(self, lab_id: str) -> Dict[str, int]:
+    def get_all_interfaces(self, lab_id: str) -> Dict[str, str]:
         """Get all interface -> link_id mappings for a lab."""
         if lab_id not in self._topology_cache:
             self._load_topology(lab_id)
         return self._topology_cache.get(lab_id, {}).copy()
+    
+    def get_container_interfaces(self, lab_id: str) -> Dict[Tuple[str, str], str]:
+        """
+        Get container-interface to link_id mappings for in-container tcpdump.
+        
+        Returns:
+            Dict mapping (container_name, interface_name) -> link_id
+            Example: {("omnilab-209b6bf7...", "eth0"): "860d1ee1..."}
+        """
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        mapping = {}
+        CONTAINER_PREFIX = "omnilab-"
+        
+        try:
+            # Get all links with their node and interface information
+            cursor.execute("""
+                SELECT 
+                    l.id as link_id,
+                    l.src_node_id,
+                    l.dst_node_id,
+                    l.src_interface,
+                    l.dst_interface,
+                    src.name as src_name,
+                    dst.name as dst_name
+                FROM links l
+                LEFT JOIN nodes src ON l.src_node_id = src.id
+                LEFT JOIN nodes dst ON l.dst_node_id = dst.id
+                WHERE l.lab_id = ?
+            """, (lab_id,))
+            
+            for row in cursor.fetchall():
+                link_id = row['link_id']
+                
+                # Source side: map (container_name, interface) -> link_id
+                if row['src_node_id'] and row['src_interface']:
+                    container_name = f"{CONTAINER_PREFIX}{row['src_node_id']}"
+                    mapping[(container_name, row['src_interface'])] = link_id
+                
+                # Destination side: map (container_name, interface) -> link_id
+                if row['dst_node_id'] and row['dst_interface']:
+                    container_name = f"{CONTAINER_PREFIX}{row['dst_node_id']}"
+                    mapping[(container_name, row['dst_interface'])] = link_id
+            
+            return mapping
+            
+        finally:
+            conn.close()
 
 
 # Global instance
