@@ -16,6 +16,7 @@ from api.networks import router as networks_router
 from api.nodes import router as nodes_router
 from api.system import router as system_router
 from api.templates import router as templates_router
+from api.templates_crud import router as templates_crud_router
 from api.updates import router as updates_router
 from api.web_proxy import router as web_proxy_router
 from core.database import init_db
@@ -92,6 +93,7 @@ app.include_router(labs_router,      prefix="/api/labs")
 app.include_router(nodes_router,     prefix="/api/nodes")
 app.include_router(networks_router,  prefix="/api/networks")
 app.include_router(templates_router, prefix="/api/templates")
+app.include_router(templates_crud_router, prefix="/api/template-library")
 app.include_router(updates_router,  prefix="/api/updates",   tags=["updates"])
 app.include_router(backup_router,   prefix="/api/backup",    tags=["backup"])
 app.include_router(health_router,   prefix="/api/health",    tags=["health"])

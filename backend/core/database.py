@@ -46,6 +46,18 @@ async def init_db():
             dns_servers TEXT, bridge_name TEXT, status TEXT DEFAULT 'inactive',
             created_at TEXT,
             FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE CASCADE)""")
+        # CRE-55: Template/Image Management System
+        await db.execute("""CREATE TABLE IF NOT EXISTS templates (
+            id TEXT PRIMARY KEY, name TEXT NOT NULL,
+            vendor TEXT, category TEXT, description TEXT,
+            type TEXT NOT NULL DEFAULT 'docker',
+            image TEXT NOT NULL,
+            cpu INTEGER DEFAULT 1, ram INTEGER DEFAULT 512, disk INTEGER DEFAULT 10,
+            console_type TEXT DEFAULT 'telnet',
+            icon TEXT, visible INTEGER DEFAULT 1,
+            is_builtin INTEGER DEFAULT 0,
+            config TEXT DEFAULT '{}',
+            created_at TEXT, updated_at TEXT)""")
         await db.execute("""CREATE TABLE IF NOT EXISTS license (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             key TEXT, tier TEXT DEFAULT 'free')""")
