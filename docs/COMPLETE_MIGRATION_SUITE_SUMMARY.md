@@ -3,6 +3,10 @@
 **Date:** May 25, 2026  
 **Session:** "Say Goodbye to fixpermissions"
 
+**Linear Issues:** CRE-58, CRE-59, CRE-60, CRE-61, CRE-62  
+**Status:** All Done ✅  
+**Primary Commit:** 2b4d835
+
 ---
 
 ## 📦 What We Shipped
