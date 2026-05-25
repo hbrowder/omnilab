@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Say Goodbye to fixpermissions | OmniLab</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            color: white;
+        }
+        
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            font-weight: 800;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .hero .subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 3rem;
+            opacity: 0.95;
+        }
+        
+        .comparison {
+            background: white;
+            max-width: 1200px;
+            margin: -80px auto 0;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .comparison-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: #f8f9fa;
+            border-bottom: 3px solid #e9ecef;
+        }
+        
+        .comparison-header div {
+            padding: 2rem;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+        
+        .eve-ng { background: #dc3545; color: white; }
+        .omnilab { background: #28a745; color: white; }
+        
+        .comparison-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .comparison-side {
+            padding: 3rem;
+        }
+        
+        .eve-ng-side { border-right: 3px solid #e9ecef; }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+        
+        .code-block .comment { color: #6272a4; }
+        .code-block .command { color: #50fa7b; }
+        .code-block .error { color: #ff5555; }
+        
+        .pain-point {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        
+        .pain-point strong { color: #856404; }
+        
+        .benefit {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        
+        .benefit strong { color: #155724; }
+        
+        .stats {
+            background: #667eea;
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 2rem auto;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 2rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-number {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .cta {
+            background: #2d3748;
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+        
+        .cta h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 1rem 3rem;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-top: 2rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .features {
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .features h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .feature-card h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .checkmark { color: #28a745; font-weight: bold; }
+        .xmark { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div>
+            <h1>Say Goodbye to<br><code>fixpermissions</code></h1>
+            <p class="subtitle">OmniLab eliminates EVE-NG's #1 pain point</p>
+        </div>
+    </div>
+    
+    <div class="comparison">
+        <div class="comparison-header">
+            <div class="eve-ng">EVE-NG</div>
+            <div class="omnilab">OmniLab</div>
+        </div>
+        
+        <div class="comparison-body">
+            <div class="comparison-side eve-ng-side">
+                <h3>The Old Way</h3>
+                
+                <div class="code-block">
+<span class="comment"># Step 1: Upload via SSH (requires root)</span>
+scp image.qcow2 root@eve:/opt/unetlab/addons/qemu/vendor/
+
+<span class="comment"># Step 2: SSH to server</span>
+ssh root@eve
+
+<span class="comment"># Step 3: Rename file</span>
+cd /opt/unetlab/addons/qemu/vendor
+mv downloaded.qcow2 virtioa.qcow2
+
+<span class="comment"># Step 4: THE MANDATORY FIX ⚠️</span>
+<span class="error">/opt/unetlab/wrappers/unl_wrapper -a fixpermissions</span>
+                </div>
+                
+                <div class="pain-point">
+                    <strong>⏱️ Time:</strong> 3-5 minutes per image
+                </div>
+                
+                <div class="pain-point">
+                    <strong>🔴 Easy to forget?</strong> YES<br>
+                    Forgot to run fixpermissions?<br>
+                    Web UI breaks → 15 min debugging
+                </div>
+                
+                <div class="pain-point">
+                    <strong>❌ Why?</strong><br>
+                    • You upload as root (root:root)<br>
+                    • Web UI runs as www-data<br>
+                    • QEMU runs as www-data<br>
+                    • www-data can't read root files!
+                </div>
+                
+                <h4 style="margin-top: 2rem;">Upload 20 images:</h4>
+                <div class="pain-point">
+                    <strong>60 minutes</strong><br>
+                    100 commands (20× fixpermissions)<br>
+                    High error rate
+                </div>
+            </div>
+            
+            <div class="comparison-side">
+                <h3>The OmniLab Way</h3>
+                
+                <div class="code-block">
+<span class="comment"># One command - works from anywhere!</span>
+<span class="command">curl -X POST http://omnilab:5000/api/template-library/upload \
+  -F "file=@image.qcow2" \
+  -F "name=Vendor 1.0" \
+  -F "vendor=Vendor"</span>
+
+<span class="comment"># Done! Backend automatically:</span>
+<span class="comment"># ✓ Writes file with correct ownership</span>
+<span class="comment"># ✓ Sets permissions to 644</span>
+<span class="comment"># ✓ Available to QEMU immediately</span>
+<span class="comment"># ✓ No manual fixpermissions needed!</span>
+                </div>
+                
+                <div class="benefit">
+                    <strong>⚡ Time:</strong> 30 seconds per image
+                </div>
+                
+                <div class="benefit">
+                    <strong>🟢 Easy to forget?</strong> NO<br>
+                    It's one command.<br>
+                    Impossible to forget.
+                </div>
+                
+                <div class="benefit">
+                    <strong>✅ Why it works:</strong><br>
+                    • Upload API writes as service user<br>
+                    • Backend runs as service user<br>
+                    • QEMU runs as service user<br>
+                    • No permission conflicts ever!
+                </div>
+                
+                <h4 style="margin-top: 2rem;">Upload 20 images:</h4>
+                <div class="benefit">
+                    <strong>10 minutes</strong><br>
+                    20 commands (auto-permissions)<br>
+                    Zero errors
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="stats">
+        <h2>By The Numbers</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">50 min</div>
+                <div class="stat-label">Saved per 20-image lab</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">0</div>
+                <div class="stat-label">Manual fixpermissions commands</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Automatic permission management</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3 min</div>
+                <div class="stat-label">To migrate entire lab from EVE-NG</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="features">
+        <h2>More Reasons to Switch</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <h3>🚀 Automated Migration</h3>
+                <p>Migrate your entire EVE-NG or GNS3 lab library in minutes with our migration tool. Templates, configs, and images — all automated.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🔐 Multi-User Built-In</h3>
+                <p>JWT-based authentication with role-based access control. Admin, instructor, and student roles out of the box. No LDAP complexity.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🐳 Docker Native</h3>
+                <p>Deploy to Docker/Kubernetes without root access. Unprivileged containers, predictable UIDs, production-ready.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🌐 API First</h3>
+                <p>Everything has a REST API. Upload images, create labs, start nodes, capture packets — all programmable.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>✅ Health Monitoring</h3>
+                <p>Built-in health checks detect and auto-fix permission issues. Unlike EVE-NG, you'll know before things break.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>📊 Modern UI</h3>
+                <p>React-based 2026 interface. Drag-and-drop topology builder, real-time console access, and dark mode.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="cta">
+        <h2>Ready to Stop Running fixpermissions?</h2>
+        <p style="font-size: 1.2rem; margin: 1rem 0;">Join the modern network emulation platform</p>
+        <a href="https://github.com/hbrowder/omnilab" class="cta-button">Get Started Free</a>
+        <p style="margin-top: 2rem; opacity: 0.7;">
+            Self-hosted • Open Source • No Vendor Lock-In
+        </p>
+    </div>
+    
+    <footer style="background: #1a202c; color: white; padding: 2rem; text-align: center;">
+        <p>OmniLab © 2026 • Built for network engineers, by network engineers</p>
+        <p style="margin-top: 1rem; opacity: 0.7;">
+            <a href="https://github.com/hbrowder/omnilab" style="color: #667eea; text-decoration: none;">GitHub</a> •
+            <a href="https://getomnilab.com" style="color: #667eea; text-decoration: none;">Documentation</a> •
+            <a href="https://getomnilab.com/migrate" style="color: #667eea; text-decoration: none;">Migration Guide</a>
+        </p>
+    </footer>
+</body>
+</html>
