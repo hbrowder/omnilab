@@ -272,6 +272,11 @@ class EVENGMigrator:
         # Create nodes
         print(f"\n🖥️  Creating {len(lab_data['nodes'])} nodes...")
         for node in lab_data["nodes"]:
+            # Parse config if it's a string
+            config = node.get("config", {})
+            if isinstance(config, str):
+                config = json.loads(config) if config else {}
+            
             r = requests.post(
                 f"{omnilab_api_url}/api/nodes/",
                 json={
@@ -279,17 +284,16 @@ class EVENGMigrator:
                     "name": node["name"],
                     "type": node["type"],
                     "image": node["image"],
-                    "left": node["left"],
-                    "top": node["top"],
-                    "cpu": node["cpu"],
-                    "ram": node["ram"],
-                    "console": node["console"],
-                    "config": node["config"],
+                    "x": node["left"],
+                    "y": node["top"],
+                    "config": config,
                 },
                 headers=headers
             )
-            status = "✓" if r.status_code in (200, 201) else "✗"
-            print(f"   {status} {node['name']} ({node['type']})")
+            if r.status_code in (200, 201):
+                print(f"   ✓ {node['name']} ({node['type']})")
+            else:
+                print(f"   ✗ {node['name']} ({node['type']}) - {r.status_code}: {r.text[:100]}")
         
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
