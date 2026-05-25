@@ -105,8 +105,8 @@ class TrafficService:
                 
                 self._sessions[filter_id] = session
                 
-                # Notify activation
-                await send_filter_activated(lab_id, filter_id)
+                # Notify activation (name=expression, duration=10000ms for 10s flash)
+                await send_filter_activated(lab_id, filter_id, expression, color, 10000)
                 
             except FileNotFoundError:
                 await send_error(lab_id, "tcpdump not found - install with: apt-get install tcpdump", filter_id)
