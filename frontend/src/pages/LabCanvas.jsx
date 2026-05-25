@@ -6,6 +6,8 @@ import { VENDORS, VENDOR_GROUPS, NodeIcon, VendorBadge } from '../components/Ven
 import NodePanel from '../components/NodePanel'
 import DrawingToolbar from '../components/DrawingToolbar'
 import TrafficFilterPanel from '../components/TrafficFilterPanel'
+import LinkAnimationEngine from '../components/LinkAnimationEngine'
+import { useTrafficWebSocket } from '../hooks/useTrafficWebSocket'
 
 const IFACES = ['GigabitEthernet0/0','GigabitEthernet0/1','GigabitEthernet0/2','GigabitEthernet0/3','FastEthernet0/0','FastEthernet0/1','eth0','eth1','eth2','eth3','mgmt0','Loopback0']
 const NET_DEFS = {
@@ -123,6 +125,9 @@ export default function LabCanvas() {
   const [drawFillColor, setDrawFillColor] = useState('rgba(88,166,255,0.3)')
   const [drawStrokeColor, setDrawStrokeColor] = useState('rgba(88,166,255,1)')
   const [drawingShape, setDrawingShape] = useState(null) // {type, startX, startY}
+
+  // CRE-68 Phase 3: WebSocket for real-time traffic animation
+  const { connected: wsConnected, events: trafficEvents, packetCounts, activeFilters: wsActiveFilters } = useTrafficWebSocket(labId)
 
 
   // Keep refs in sync with state
@@ -653,6 +658,35 @@ export default function LabCanvas() {
                 )
               })}
 
+              {/* CRE-68 Phase 3: Animated traffic particles */}
+              <LinkAnimationEngine 
+                links={links.map(link => {
+                  const src = nodes.find(n => n.id === link.srcId)
+                  const dst = link.dstId ? nodes.find(n => n.id === link.dstId) : null
+                  const net = link.netId ? networks.find(n => n.id === link.netId) : null
+                  const dstObj = dst || net
+                  if (!src || !dstObj) return null
+                  
+                  const sx = src.x + 24, sy = src.y + 24
+                  const dx = dstObj.x + (net ? 30 : 24), dy = dstObj.y + (net ? 25 : 24)
+                  
+                  // Generate path (same logic as link rendering above)
+                  let pathD = `M${sx},${sy} L${dx},${dy}`
+                  if (link.linkstyle === 'Bezier') {
+                    const midX = (sx + dx) / 2, midY = (sy + dy) / 2
+                    const perpX = -(dy - sy) / 4, perpY = (dx - sx) / 4
+                    const cp1x = midX + perpX, cp1y = midY + perpY
+                    pathD = `M${sx},${sy} Q${cp1x},${cp1y} ${dx},${dy}`
+                  } else if (link.linkstyle === 'Flowchart') {
+                    const midX = (sx + dx) / 2
+                    pathD = `M${sx},${sy} L${midX},${sy} L${midX},${dy} L${dx},${dy}`
+                  }
+                  
+                  return { id: link.id, path: pathD }
+                }).filter(Boolean)}
+                trafficEvents={trafficEvents}
+                activeFilters={wsActiveFilters}
+              />
 
               {selBox && selBox.w > 5 && selBox.h > 5 && (
                 <rect x={selBox.x} y={selBox.y} width={selBox.w} height={selBox.h}
@@ -1114,6 +1148,8 @@ export default function LabCanvas() {
           labId={labId}
           darkMode={darkMode}
           onClose={()=>setShowTrafficFilters(false)}
+          wsConnected={wsConnected}
+          packetCounts={packetCounts}
         />
       )}
     </div>

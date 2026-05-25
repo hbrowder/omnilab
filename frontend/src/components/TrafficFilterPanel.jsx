@@ -14,7 +14,7 @@ import React, { useState, useEffect } from 'react'
  *  - Priority (higher = rendered first)
  */
 
-export default function TrafficFilterPanel({ labId, darkMode, onClose }) {
+export default function TrafficFilterPanel({ labId, darkMode, onClose, wsConnected, packetCounts }) {
   const [filters, setFilters] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -181,8 +181,34 @@ export default function TrafficFilterPanel({ labId, darkMode, onClose }) {
           margin: 0,
           fontSize: 18,
           fontWeight: 600,
-          color: text
-        }}>Traffic Filters</h2>
+          color: text,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10
+        }}>
+          Traffic Filters
+          {/* WebSocket status indicator */}
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 12,
+            fontWeight: 400,
+            color: wsConnected ? '#10b981' : '#ef4444',
+            background: wsConnected ? (darkMode ? '#064e3b' : '#d1fae5') : (darkMode ? '#7f1d1d' : '#fee2e2'),
+            padding: '3px 8px',
+            borderRadius: 12
+          }}>
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: wsConnected ? '#10b981' : '#ef4444',
+              animation: wsConnected ? 'pulse 2s ease-in-out infinite' : 'none'
+            }}/>
+            {wsConnected ? 'Live' : 'Offline'}
+          </span>
+        </h2>
         <button
           onClick={onClose}
           style={{
@@ -332,10 +358,26 @@ export default function TrafficFilterPanel({ labId, darkMode, onClose }) {
                   color: textMuted,
                   display: 'flex',
                   gap: 12,
-                  opacity: filter.enabled ? 1 : 0.5
+                  opacity: filter.enabled ? 1 : 0.5,
+                  alignItems: 'center'
                 }}>
                   <span>Timeout: {filter.timeout}ms</span>
                   <span>Priority: {filter.priority}</span>
+                  {/* Packet count (CRE-68 Phase 3) */}
+                  {filter.enabled && packetCounts && packetCounts[filter.id] !== undefined && (
+                    <span style={{
+                      marginLeft: 'auto',
+                      fontWeight: 600,
+                      color: filter.color,
+                      fontSize: 12,
+                      background: darkMode ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
+                      padding: '2px 8px',
+                      borderRadius: 10,
+                      border: `1px solid ${filter.color}`
+                    }}>
+                      📊 {packetCounts[filter.id]} packets
+                    </span>
+                  )}
                 </div>
               </div>
             ))}

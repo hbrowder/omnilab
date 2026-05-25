@@ -20,6 +20,7 @@ from api.templates import router as templates_router
 from api.templates_crud import router as templates_crud_router
 from api.updates import router as updates_router
 from api.web_proxy import router as web_proxy_router
+from api.traffic_websocket import router as traffic_websocket_router
 from routes.traffic_filters import router as traffic_filters_router
 from routes.textobjects import router as textobjects_router
 from core.database import init_db
@@ -103,6 +104,7 @@ app.include_router(backup_router,   prefix="/api/backup",    tags=["backup"])
 app.include_router(health_router,   prefix="/api/health",    tags=["health"])
 app.include_router(system_router,    prefix="/api/system")
 app.include_router(console_router,   prefix="/api/console")
+app.include_router(traffic_websocket_router, prefix="/api")  # CRE-68 Phase 3: WebSocket for traffic events
 app.include_router(traffic_filters_router)  # CRE-68: Traffic Filters (uses /api/labs prefix internally)
 app.include_router(textobjects_router)      # CRE-64: Drawing Tools (uses /api/labs prefix internally)
 # CRE-39: docker-node web-UI reverse proxy. Routes are

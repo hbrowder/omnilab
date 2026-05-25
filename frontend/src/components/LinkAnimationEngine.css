@@ -1,0 +1,39 @@
+/**
+ * LinkAnimationEngine.css
+ * Styles for animated traffic particles and link effects.
+ * CRE-68 Phase 3
+ */
+
+.traffic-animation-layer {
+  pointer-events: none; /* Don't block interactions with links/nodes */
+  z-index: 100; /* Above links, below nodes */
+}
+
+.traffic-particle {
+  opacity: 1;
+  transition: opacity 0.3s ease-out;
+}
+
+/* Link glow effect (applied by parent when traffic is active) */
+.link-active {
+  filter: drop-shadow(0 0 8px currentColor);
+  stroke-width: 3px;
+  transition: all 0.3s ease-in-out;
+}
+
+.link-active:hover {
+  filter: drop-shadow(0 0 12px currentColor);
+  stroke-width: 4px;
+}
+
+/* Optional: Animated path dash for "electrical current" effect */
+.link-active-flow {
+  stroke-dasharray: 10 5;
+  animation: dash-flow 1s linear infinite;
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -15;
+  }
+}
