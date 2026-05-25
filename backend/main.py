@@ -6,6 +6,7 @@ from pathlib import Path
 
 import httpx
 import uvicorn
+from api.auth import router as auth_router
 from api.backup import router as backup_router
 from api.billing import router as billing_router
 from api.console import router as console_router
@@ -89,6 +90,7 @@ async def timing_middleware(request: Request, call_next):
 
 app.include_router(license_router, prefix="/api/license", tags=["license"])
 app.include_router(billing_router, prefix="/api/billing", tags=["billing"])
+app.include_router(auth_router,     prefix="/api/auth",    tags=["auth"])
 app.include_router(labs_router,      prefix="/api/labs")
 app.include_router(nodes_router,     prefix="/api/nodes")
 app.include_router(networks_router,  prefix="/api/networks")

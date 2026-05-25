@@ -58,6 +58,25 @@ async def init_db():
             is_builtin INTEGER DEFAULT 0,
             config TEXT DEFAULT '{}',
             created_at TEXT, updated_at TEXT)""")
+        # CRE-53: Multi-User RBAC
+        await db.execute("""CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE,
+            email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'readonly',
+            full_name TEXT, is_active INTEGER DEFAULT 1,
+            last_login TEXT, created_at TEXT, updated_at TEXT)""")
+        await db.execute("""CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)""")
+        await db.execute("""CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)""")
+        # Lab ownership and sharing (CRE-53)
+        for ddl in (
+            "ALTER TABLE labs ADD COLUMN owner_id TEXT",
+            "ALTER TABLE labs ADD COLUMN shared_with TEXT DEFAULT '[]'",
+            "ALTER TABLE labs ADD COLUMN visibility TEXT DEFAULT 'private'",
+        ):
+            try:
+                await db.execute(ddl)
+            except Exception:
+                pass
         await db.execute("""CREATE TABLE IF NOT EXISTS license (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             key TEXT, tier TEXT DEFAULT 'free')""")
