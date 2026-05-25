@@ -2,6 +2,7 @@ import uuid
 
 from core.database import get_db
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -109,3 +110,101 @@ async def delete_link(link_id: str):
             await db.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to delete link: {str(e)}")
     return None
+
+
+# ============================================================================
+# CRE-57: Packet Capture (Wireshark Integration)
+# ============================================================================
+
+from services.packet_capture import (
+    CaptureError,
+    cleanup_old_captures,
+    get_capture_file,
+    list_captures,
+    start_capture,
+    stop_capture,
+)
+
+
+class CaptureStart(BaseModel):
+    link_id: str
+    lab_id: str
+    interface: str
+    filter: str | None = ""
+    max_packets: int | None = 0
+    max_duration_sec: int | None = 300  # Default: 5 minutes
+
+
+@router.post("/captures/start", status_code=201)
+async def start_packet_capture(data: CaptureStart):
+    """
+    Start packet capture on a network link.
+    
+    Requires tcpdump with CAP_NET_RAW capability:
+        sudo setcap cap_net_raw,cap_net_admin=eip $(which tcpdump)
+    
+    BPF filter examples:
+        - "tcp port 80" (HTTP traffic)
+        - "icmp" (ping packets)
+        - "host 192.168.1.1" (traffic to/from specific IP)
+        - "" (capture everything)
+    """
+    try:
+        result = await start_capture(
+            link_id=data.link_id,
+            lab_id=data.lab_id,
+            interface=data.interface,
+            filter_expr=data.filter or "",
+            max_packets=data.max_packets or 0,
+            max_duration_sec=data.max_duration_sec or 0,
+        )
+        return result
+    except CaptureError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start capture: {str(e)}")
+
+
+@router.post("/captures/{capture_id}/stop")
+async def stop_packet_capture(capture_id: str):
+    """Stop an active packet capture."""
+    try:
+        result = await stop_capture(capture_id)
+        return result
+    except CaptureError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        import traceback
+        error_detail = f"Failed to stop capture: {str(e)}\n{traceback.format_exc()}"
+        raise HTTPException(status_code=500, detail=error_detail)
+
+
+@router.get("/captures")
+async def list_active_captures():
+    """List all active packet captures."""
+    return list_captures()
+
+
+@router.get("/captures/{capture_id}/download")
+async def download_capture(capture_id: str):
+    """
+    Download PCAP file for a capture.
+    
+    Can be opened in Wireshark, tcpdump, or tshark.
+    """
+    try:
+        pcap_path = get_capture_file(capture_id)
+        return FileResponse(
+            path=str(pcap_path),
+            media_type="application/vnd.tcpdump.pcap",
+            filename=pcap_path.name,
+        )
+    except CaptureError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/captures/cleanup")
+async def cleanup_captures(max_age_hours: int = 24):
+    """Delete PCAP files older than max_age_hours (default: 24)."""
+    deleted_count = await cleanup_old_captures(max_age_hours)
+    return {"deleted_count": deleted_count, "max_age_hours": max_age_hours}
