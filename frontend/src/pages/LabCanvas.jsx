@@ -4,6 +4,7 @@ import { getTopology, getLab, addNode, deleteNode } from '../utils/api'
 import { useStore } from '../store'
 import { VENDORS, VENDOR_GROUPS, NodeIcon, VendorBadge } from '../components/VendorIcons'
 import NodePanel from '../components/NodePanel'
+import DrawingToolbar from '../components/DrawingToolbar'
 
 const IFACES = ['GigabitEthernet0/0','GigabitEthernet0/1','GigabitEthernet0/2','GigabitEthernet0/3','FastEthernet0/0','FastEthernet0/1','eth0','eth1','eth2','eth3','mgmt0','Loopback0']
 const NET_DEFS = {
@@ -114,6 +115,13 @@ export default function LabCanvas() {
   const [startNum, setStartNum] = useState(1)
   const [activeCategory, setActiveCategory] = useState('Routers')
   const [pendingAdd, setPendingAdd] = useState(null)
+  
+  // CRE-64: Drawing tools state
+  const [drawingTool, setDrawingTool] = useState('select')
+  const [drawFillColor, setDrawFillColor] = useState('rgba(88,166,255,0.3)')
+  const [drawStrokeColor, setDrawStrokeColor] = useState('rgba(88,166,255,1)')
+  const [drawingShape, setDrawingShape] = useState(null) // {type, startX, startY}
+
 
   // Keep refs in sync with state
   useEffect(()=>{ selectedRef.current=selected },[selected])
@@ -173,6 +181,16 @@ export default function LabCanvas() {
     const onMove=(e)=>{
       const c=toCanvas(e.clientX,e.clientY)
       setMousePos(c)
+      
+      // CRE-64: Drawing shape - update end coordinates
+      if(drawingShape){
+        const r=svgRef.current.getBoundingClientRect()
+        const cx=(e.clientX-r.left-panRef.current.x)/zoomRef.current
+        const cy=(e.clientY-r.top-panRef.current.y)/zoomRef.current
+        setDrawingShape(s=>({...s,endX:cx,endY:cy}))
+        return
+      }
+      
       // Drag-select box
       if(selBoxStart.current && !draggingRef.current && !isPanning.current){
         const sx=selBoxStart.current.x, sy=selBoxStart.current.y
@@ -212,6 +230,31 @@ export default function LabCanvas() {
       }
     }
     const onUp=(e)=>{
+      // CRE-64: Finish drawing shape
+      if(drawingShape){
+        const {type,startX,startY,endX,endY} = drawingShape
+        const width = Math.abs(endX - startX)
+        const height = Math.abs(endY - startY)
+        
+        // Only create shape if it's bigger than 10px (avoid accidental clicks)
+        if(width > 10 || height > 10){
+          const shapeId = 'shape-' + Date.now()
+          setTexts(p=>[...p,{
+            id:shapeId,
+            type,
+            x:Math.min(startX,endX),
+            y:Math.min(startY,endY),
+            width,
+            height,
+            fill:drawFillColor,
+            stroke:drawStrokeColor,
+            text:'' // empty text for shapes
+          }])
+        }
+        setDrawingShape(null)
+        return
+      }
+      
       selBoxStart.current=null
       setSelBox(null)
       isPanning.current=false
@@ -268,6 +311,26 @@ export default function LabCanvas() {
       panStart.current={x:e.clientX-panRef.current.x,y:e.clientY-panRef.current.y}
       e.preventDefault(); return
     }
+    
+    // CRE-64: Drawing mode active
+    if(drawingTool !== 'select' && (e.target===svgRef.current||e.target.dataset?.canvas)){
+      const r=svgRef.current.getBoundingClientRect()
+      const cx=(e.clientX-r.left-panRef.current.x)/zoomRef.current
+      const cy=(e.clientY-r.top-panRef.current.y)/zoomRef.current
+      
+      if(drawingTool === 'text'){
+        const text = prompt('Enter text:')
+        if(text){
+          setTexts(p=>[...p,{id:'txt-'+Date.now(),text,x:cx,y:cy}])
+        }
+        return
+      }
+      
+      // Start drawing shape (rectangle or circle)
+      setDrawingShape({type:drawingTool,startX:cx,startY:cy,endX:cx,endY:cy})
+      return
+    }
+    
     if(e.target===svgRef.current||e.target.dataset?.canvas){
       setContextMenu(null)
       const ns=new Set(); selectedRef.current=ns; setSelected(ns)
@@ -505,14 +568,28 @@ export default function LabCanvas() {
                     <path d={pathD} stroke={linkColor} strokeWidth={linkWidth} strokeDasharray={dash} fill="none"/>
                     <path d={pathD} stroke="transparent" strokeWidth="14" fill="none"/>
                     {!hideLabels&&<>
+                      {/* CRE-65-B: Source interface label (always shown) */}
                       <text x={sxe} y={sye} textAnchor="middle" fontSize="8" fill={darkMode?'#60a5fa':'#2563eb'} fontFamily="monospace"
                         transform={`rotate(${rot},${sxe},${sye})`}>
                         {link.srcIface.replace('GigabitEthernet','Gi').replace('FastEthernet','Fa')}
                       </text>
-                      <text x={dxe} y={dye} textAnchor="middle" fontSize="8" fill={darkMode?'#60a5fa':'#2563eb'} fontFamily="monospace"
-                        transform={`rotate(${rot},${dxe},${dye})`}>
-                        {link.dstIface.replace('GigabitEthernet','Gi').replace('FastEthernet','Fa')}
-                      </text>
+                      
+                      {/* CRE-65-B: Destination interface label (node-to-node OR node-to-network) */}
+                      {dst ? (
+                        // Node-to-node: show destination node interface
+                        <text x={dxe} y={dye} textAnchor="middle" fontSize="8" fill={darkMode?'#60a5fa':'#2563eb'} fontFamily="monospace"
+                          transform={`rotate(${rot},${dxe},${dye})`}>
+                          {link.dstIface.replace('GigabitEthernet','Gi').replace('FastEthernet','Fa')}
+                        </text>
+                      ) : (
+                        // Node-to-network: show network name at connection point
+                        <text x={dxe} y={dye} textAnchor="middle" fontSize="9" fill={darkMode?'#a78bfa':'#7c3aed'} fontFamily="sans-serif" fontWeight="600"
+                          transform={`rotate(${rot},${dxe},${dye})`}>
+                          {net.name}
+                        </text>
+                      )}
+                      
+                      {/* Link label (custom text) */}
                       {link.label&&(
                         <text x={labelX} y={labelY-8} textAnchor="middle" fontSize="10" fill={linkColor} fontWeight="600" fontFamily="sans-serif"
                           transform={`rotate(${rot},${labelX},${labelY-8})`}>
@@ -538,16 +615,72 @@ export default function LabCanvas() {
 
               {networks.map(net=>{
                 const def=NET_DEFS[net.type]||NET_DEFS.bridge; const c=def.color
+                // CRE-65-A: Count connections to this network
+                const connectionCount = links.filter(l=>l.netId===net.id).length
+                // CRE-65-C: Size scaling based on connections (min 60, max 100)
+                const baseSize = 60
+                const sizeBonus = Math.min(40, connectionCount * 8)
+                const totalSize = baseSize + sizeBonus
+                const scale = totalSize / 60
+                const isSelected = selected instanceof Set ? selected.has(net.id) : false
+                const isHovered = hoveredId === net.id
+                
                 return(
                   <g key={net.id} transform={`translate(${net.x},${net.y})`} style={{cursor:'grab'}}
+                    onMouseEnter={()=>setHoveredId(net.id)}
+                    onMouseLeave={()=>setHoveredId(null)}
                     onContextMenu={e=>onNetRightClick(e,net)}>
-                    <rect x="-4" y="-4" width="68" height="62" fill="transparent"
+                    <rect x="-4" y="-4" width="68" height="72" fill="transparent"
                       onMouseDown={e=>startDrag(e,'net',net.id,net.x,net.y)}/>
-                    {net.type==='nat'?<path d="M8 36 Q4 36 4 28 Q4 20 12 20 Q12 12 20 12 Q25 10 30 14 Q36 10 40 14 Q48 14 48 22 Q48 30 44 32 Q46 36 42 36 Z" fill={`${c}22`} stroke={c} strokeWidth="2.5"/>
-                    :net.type==='internal'?<g><line x1="4" y1="24" x2="56" y2="24" stroke={c} strokeWidth="4"/>{[12,24,36,48].map(x=><circle key={x} cx={x} cy="24" r="5" fill={c}/>)}</g>
-                    :<g><rect x="4" y="10" width="52" height="20" rx="3" fill={`${c}22`} stroke={c} strokeWidth="2"/>{[14,24,34,44].map(x=><line key={x} x1={x} y1="10" x2={x} y2="30" stroke={c} strokeWidth="1"/>)}</g>}
-                    {!hideLabels&&<text x="30" y="48" textAnchor="middle" fontSize="10" fill={c} fontWeight="500" fontFamily="sans-serif" style={{pointerEvents:'none'}}>{net.name}</text>}
-                    <circle cx="30" cy="5" r="6" fill={c} stroke={bg} strokeWidth="2" style={{cursor:'crosshair'}} onMouseDown={e=>startConnect(e,net.id)}/>
+                    
+                    {/* CRE-65-C: Selection and hover states */}
+                    {isSelected&&<rect x="-6" y="-2" width="72" height="70" rx="6" fill="none" stroke="#a78bfa" strokeWidth="2" strokeDasharray="5,3" style={{pointerEvents:'none'}}/>}
+                    {isHovered&&!isSelected&&<rect x="-4" y="0" width="68" height="66" rx="5" fill={darkMode?'#ffffff08':'#f5f3ff'} stroke={darkMode?'#334155':'#ddd6fe'} strokeWidth="1" style={{pointerEvents:'none'}}/>}
+                    
+                    <g transform={`scale(${scale})`} transform-origin="30 24">
+                      {/* CRE-65-A: Enhanced network icons with better visual distinction */}
+                      {net.type==='nat'?
+                        // Cloud icon for NAT/Internet
+                        <g>
+                          <path d="M8 36 Q4 36 4 28 Q4 20 12 20 Q12 12 20 12 Q25 10 30 14 Q36 10 40 14 Q48 14 48 22 Q48 30 44 32 Q46 36 42 36 Z" 
+                            fill={`${c}44`} stroke={c} strokeWidth="2.5"/>
+                          <text x="25" y="30" textAnchor="middle" fontSize="16" fill={c} fontFamily="sans-serif" style={{pointerEvents:'none'}}>☁</text>
+                        </g>
+                      :net.type==='internal'?
+                        // Line topology for internal network
+                        <g>
+                          <line x1="4" y1="24" x2="56" y2="24" stroke={c} strokeWidth="5"/>
+                          {[12,24,36,48].map(x=><circle key={x} cx={x} cy="24" r="6" fill={c} stroke={bg} strokeWidth="1"/>)}
+                        </g>
+                      :
+                        // Bridge/Switch icon (default)
+                        <g>
+                          <rect x="4" y="10" width="52" height="20" rx="3" fill={`${c}44`} stroke={c} strokeWidth="2.5"/>
+                          {[14,24,34,44].map(x=><line key={x} x1={x} y1="10" x2={x} y2="30" stroke={c} strokeWidth="1.5"/>)}
+                        </g>
+                      }
+                    </g>
+                    
+                    {/* CRE-65-A: Always-visible network label */}
+                    <text x="34" y="56" textAnchor="middle" fontSize="11" fill={tc} fontWeight="600" fontFamily="sans-serif" style={{pointerEvents:'none'}}>
+                      {net.name}
+                    </text>
+                    
+                    {/* CRE-65-C: Status indicator (active if has connections) */}
+                    <circle cx="34" cy="62" r="3" fill={connectionCount>0?'#22c55e':'#9ca3af'} style={{pointerEvents:'none'}}/>
+                    
+                    {/* CRE-65-A: Connection count badge */}
+                    {connectionCount > 0 && (
+                      <g>
+                        <circle cx="56" cy="8" r="9" fill={c} stroke={bg} strokeWidth="2.5"/>
+                        <text x="56" y="12" textAnchor="middle" fontSize="11" fill={bg} fontWeight="700" fontFamily="sans-serif" style={{pointerEvents:'none'}}>
+                          {connectionCount}
+                        </text>
+                      </g>
+                    )}
+                    
+                    {/* Connect port (top center) */}
+                    <circle cx="34" cy="5" r="6" fill={c} stroke={bg} strokeWidth="2" style={{cursor:'crosshair'}} onMouseDown={e=>startConnect(e,net.id)}/>
                   </g>
                 )
               })}
@@ -594,11 +727,59 @@ export default function LabCanvas() {
                 )
               })}
 
-              {texts.map(t=>(
-                <text key={t.id} x={t.x} y={t.y} fontSize={t.size||14} fill={tc} fontFamily="sans-serif"
-                  onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
-                  onDoubleClick={()=>{const v=prompt('Edit:',t.text);if(v!==null)setTexts(p=>p.map(tx=>tx.id===t.id?{...tx,text:v}:tx))}} style={{cursor:'move'}}>{t.text}</text>
-              ))}
+              {texts.map(t=>{
+                // CRE-64: Render shapes (rectangles/circles) or text
+                if(t.type === 'rectangle'){
+                  return (
+                    <rect key={t.id} x={t.x} y={t.y} width={t.width} height={t.height}
+                      fill={t.fill} stroke={t.stroke} strokeWidth={2}
+                      onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
+                      style={{cursor:'move'}}/>
+                  )
+                } else if(t.type === 'circle'){
+                  return (
+                    <ellipse key={t.id}
+                      cx={t.x + t.width/2} cy={t.y + t.height/2}
+                      rx={t.width/2} ry={t.height/2}
+                      fill={t.fill} stroke={t.stroke} strokeWidth={2}
+                      onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
+                      style={{cursor:'move'}}/>
+                  )
+                } else {
+                  // Regular text
+                  return (
+                    <text key={t.id} x={t.x} y={t.y} fontSize={t.size||14} fill={tc} fontFamily="sans-serif"
+                      onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
+                      onDoubleClick={()=>{const v=prompt('Edit:',t.text);if(v!==null)setTexts(p=>p.map(tx=>tx.id===t.id?{...tx,text:v}:tx))}} style={{cursor:'move'}}>{t.text}</text>
+                  )
+                }
+              })}
+              
+              {/* CRE-64: Preview shape being drawn */}
+              {drawingShape && drawingShape.type === 'rectangle' && (
+                <rect
+                  x={Math.min(drawingShape.startX,drawingShape.endX)}
+                  y={Math.min(drawingShape.startY,drawingShape.endY)}
+                  width={Math.abs(drawingShape.endX-drawingShape.startX)}
+                  height={Math.abs(drawingShape.endY-drawingShape.startY)}
+                  fill={drawFillColor}
+                  stroke={drawStrokeColor}
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  pointerEvents="none"/>
+              )}
+              {drawingShape && drawingShape.type === 'circle' && (
+                <ellipse
+                  cx={(drawingShape.startX+drawingShape.endX)/2}
+                  cy={(drawingShape.startY+drawingShape.endY)/2}
+                  rx={Math.abs(drawingShape.endX-drawingShape.startX)/2}
+                  ry={Math.abs(drawingShape.endY-drawingShape.startY)/2}
+                  fill={drawFillColor}
+                  stroke={drawStrokeColor}
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  pointerEvents="none"/>
+              )}
             </g>
           </svg>
 
@@ -628,6 +809,16 @@ export default function LabCanvas() {
               </svg>
             </div>
           )}
+          
+          {/* CRE-64: Drawing Toolbar */}
+          <DrawingToolbar
+            activeTool={drawingTool}
+            onToolChange={setDrawingTool}
+            fillColor={drawFillColor}
+            strokeColor={drawStrokeColor}
+            onFillChange={setDrawFillColor}
+            onStrokeChange={setDrawStrokeColor}
+          />
 
           <div style={{position:'absolute',bottom:12,left:48,fontSize:10,color:sc,background:darkMode?'rgba(15,23,42,0.85)':'rgba(255,255,255,0.92)',padding:'3px 10px',borderRadius:4,border:'1px solid '+bc,pointerEvents:'none'}}>
             Right-click to add · Drag canvas to multi-select · Ctrl+click to add to selection · Delete key removes selection · Alt+drag to pan
