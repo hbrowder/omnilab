@@ -38,6 +38,14 @@ async def init_db():
             src_node_id TEXT NOT NULL, dst_node_id TEXT NOT NULL,
             created_at TEXT,
             FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE CASCADE)""")
+        # CRE-56: NAT networks for internet access
+        await db.execute("""CREATE TABLE IF NOT EXISTS networks (
+            id TEXT PRIMARY KEY, lab_id TEXT NOT NULL,
+            name TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'bridge',
+            subnet TEXT, gateway TEXT, dhcp_start TEXT, dhcp_end TEXT,
+            dns_servers TEXT, bridge_name TEXT, status TEXT DEFAULT 'inactive',
+            created_at TEXT,
+            FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE CASCADE)""")
         await db.execute("""CREATE TABLE IF NOT EXISTS license (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             key TEXT, tier TEXT DEFAULT 'free')""")
