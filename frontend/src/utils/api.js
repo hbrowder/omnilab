@@ -1,5 +1,5 @@
 import axios from 'axios'
-const api = axios.create({ baseURL: '/api' })
+const api = axios.create({ baseURL: 'http://192.168.174.132:5000/api' })
 export const getLabs = () => api.get('/labs/')
 export const createLab = (data) => api.post('/labs/', data)
 export const getLab = (id) => api.get('/labs/'+id)

@@ -160,6 +160,11 @@ def serve_checkout():
 
 @app.get("/{full_path:path}")
 async def spa_fallback(full_path: str):
+    # Don't serve static files for API routes - let FastAPI handle 404
+    if full_path.startswith("api/"):
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    
     file_path = DIST / full_path
     if file_path.exists() and file_path.is_file():
         return FileResponse(str(file_path))

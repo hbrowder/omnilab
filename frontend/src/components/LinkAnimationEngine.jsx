@@ -97,6 +97,40 @@ const LinkAnimationEngine = ({ links, trafficEvents, activeFilters }) => {
 
       spawnParticle(link_id, filter.color, filter.duration);
     }
+    else if (latestEvent.type === 'traffic_batch') {
+      // CRE-68 Phase 3 Milestone 4 Task 3: Handle batched events
+      // Expand batch into individual particle animations
+      const { events, count } = latestEvent;
+      
+      if (!events || events.length === 0) {
+        console.warn('traffic_batch with no events', latestEvent);
+        return;
+      }
+
+      // Stagger animations slightly to avoid all particles spawning at once
+      // Spread over 100ms (matching backend batch interval)
+      const staggerDelay = events.length > 1 ? 100 / events.length : 0;
+
+      events.forEach((packet, idx) => {
+        const { filter_id, link_id } = packet;
+        
+        // Find filter details (color, duration)
+        const filter = activeFilters.get(filter_id);
+        if (!filter) {
+          console.warn(`Filter ${filter_id} not found in activeFilters (batch event ${idx})`);
+          return;
+        }
+
+        // Spawn with staggered timing for smooth visual flow
+        if (staggerDelay > 0 && idx > 0) {
+          setTimeout(() => {
+            spawnParticle(link_id, filter.color, filter.duration);
+          }, idx * staggerDelay);
+        } else {
+          spawnParticle(link_id, filter.color, filter.duration);
+        }
+      });
+    }
   }, [trafficEvents, activeFilters, spawnParticle]);
 
   // Render particles as SVG circles with animateMotion

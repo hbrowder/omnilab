@@ -1,0 +1,165 @@
+# Task 3: Data Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         CRE-68 EVENT BATCHING FLOW                       │
+└─────────────────────────────────────────────────────────────────────────┘
+
+BACKEND (Python FastAPI)                    FRONTEND (React + Vite)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━                ━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌──────────────────────────┐
+│ traffic_service.py       │
+│ _read_packets_from_...() │                
+│                          │                
+│  [Packet arrives]        │                
+│         ↓                │                
+│  session.pending_events  │                
+│    .append(event)        │                
+│         ↓                │                
+│  Check: elapsed > 100ms? │                
+│      OR count >= 20?     │                
+│         ↓                │                
+│    YES: _flush_batch()   │                
+│         ↓                │                
+└──────────────────────────┘                
+            ↓                                
+┌──────────────────────────┐                
+│ traffic_websocket.py     │                
+│ send_traffic_batch()     │                
+│                          │                
+│  WebSocket.send_json({   │                
+│    "type": "traffic_...  │ ───────────┐   
+│    "events": [           │            │   
+│      {filter_id, link... │            │   
+│      {filter_id, link... │            │   
+│    ],                    │            │   
+│    "count": 6            │            │   
+│  })                      │            │   
+└──────────────────────────┘            │   
+                                        │   
+                                        │   WebSocket Message
+                                        │   
+                             ┌──────────▼──────────────┐
+                             │ useTrafficWebSocket.js  │
+                             │                         │
+                             │  onMessage(msg) {       │
+                             │    const data = JSON... │
+                             │                         │
+                             │    switch(data.type) {  │
+                             │      case 'traffic_b... │
+                             │        // Pass through  │
+                             │        break;           │
+                             │    }                    │
+                             │                         │
+                             │    setEvents(prev =>    │
+                             │      [...prev, data])   │
+                             │  }                      │
+                             └─────────┬───────────────┘
+                                       │
+                                       │ events array
+                                       │
+                             ┌─────────▼───────────────┐
+                             │ LinkAnimationEngine.jsx │
+                             │                         │
+                             │  useEffect(() => {      │
+                             │    const latest =       │
+                             │      events[length-1]   │
+                             │                         │
+                             │    if (latest.type ===  │
+                             │        'traffic_batch'  │
+                             │    ) {                  │
+                             │      // EXPAND BATCH    │
+                             │      events.forEach(    │
+                             │        (evt, i) => {    │
+                             │          const delay =  │
+                             │            (i / N) *    │
+                             │            100ms        │
+                             │          setTimeout(() │
+                             │            spawnParticle│
+                             │            (...)        │
+                             │          , delay)       │
+                             │        }                │
+                             │      )                  │
+                             │    }                    │
+                             │  }, [events])           │
+                             └─────────┬───────────────┘
+                                       │
+                                       │ Staggered spawns
+                                       │
+                             ┌─────────▼───────────────┐
+                             │ Canvas Animation        │
+                             │                         │
+                             │  t=0ms:   ●────────────│
+                             │  t=16ms:  ●─────●──────│
+                             │  t=33ms:  ●─────●────●─│
+                             │  t=50ms:  ──────●────●─│
+                             │  t=66ms:  ──────●────●─│
+                             │  t=83ms:  ───────────●─│
+                             │  t=100ms: ──────────────│
+                             │                         │
+                             │  Smooth flow (not burst)│
+                             └─────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         PERFORMANCE COMPARISON                           │
+├────────────────────────────┬────────────────────────────────────────────┤
+│ BEFORE (Task 1)            │ AFTER (Task 2 + 3)                        │
+├────────────────────────────┼────────────────────────────────────────────┤
+│ 100 packets/sec            │ 100 packets/sec                           │
+│ = 100 WebSocket messages   │ = 10 batches                              │
+│ = 100 traffic_match events │ = 10 traffic_batch events                 │
+│                            │                                            │
+│ All particles spawn at     │ Particles spawn smoothly:                 │
+│ same instant (burst)       │   Batch 1: spread over 100ms              │
+│                            │   Batch 2: spread over 100ms              │
+│                            │   ...                                      │
+│                            │                                            │
+│ Network overhead: HIGH     │ Network overhead: 90% LOWER ✅            │
+│ Visual quality: OK         │ Visual quality: BETTER ✅                 │
+└────────────────────────────┴────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        COLOR PICKER DATA FLOW                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  USER                     FRONTEND                    BACKEND           │
+│  ────                     ────────                    ───────           │
+│                                                                          │
+│  1. Clicks "New Filter"                                                 │
+│       ↓                                                                  │
+│  2. TrafficFilterPanel shows form                                       │
+│       ↓                                                                  │
+│  3. Picks color #FF1493 ←──── <input type="color" />                   │
+│       ↓                                                                  │
+│  4. Enters "icmp" expr                                                  │
+│       ↓                                                                  │
+│  5. Clicks "Save"                                                       │
+│       ↓                                                                  │
+│       POST /api/labs/{id}/filters                                       │
+│       {                          ────────────────→                      │
+│         "name": "My ICMP",                                              │
+│         "expr": "icmp",                          traffic_filter         │
+│         "color": "#FF1493",                         table               │
+│         "timeout": 5000                                                 │
+│       }                                          ┌────────────────┐     │
+│                                                  │ id: abc123     │     │
+│                                            ───→  │ color: #FF1493 │     │
+│                                                  │ expr: icmp     │     │
+│                                                  └────────────────┘     │
+│                                                                          │
+│  6. Filter appears in panel with #FF1493 dot                            │
+│       ↓                                                                  │
+│  7. User starts capture                                                 │
+│       ↓                                                                  │
+│  8. Packets match → batching → WebSocket                                │
+│       ↓                                                                  │
+│  9. LinkAnimationEngine spawns particles                                │
+│      using #FF1493 color for THIS filter ✅                             │
+│       ↓                                                                  │
+│  10. Packet counter badge shows #FF1493 border ✅                       │
+│                                                                          │
+│  RESULT: User's custom color applied throughout the UI ✅               │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```

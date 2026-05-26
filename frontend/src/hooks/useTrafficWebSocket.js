@@ -9,7 +9,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const WEBSOCKET_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:5000';
+const WEBSOCKET_URL = process.env.REACT_APP_WS_URL || 'ws://192.168.174.132:9999';
 const RECONNECT_DELAY = 3000; // 3 seconds
 const MAX_EVENTS_IN_MEMORY = 100; // Keep last 100 events for debugging
 
@@ -71,6 +71,12 @@ export const useTrafficWebSocket = (labId) => {
         case 'traffic_match':
           // This is the hot path - will trigger animations
           // Don't log every single packet (too noisy)
+          break;
+
+        case 'traffic_batch':
+          // CRE-68 Phase 3 Milestone 4 Task 3: Handle batched events
+          // Animation handled by LinkAnimationEngine
+          // Packet counting handled by packet_count_update messages
           break;
 
         case 'packet_count_update':
