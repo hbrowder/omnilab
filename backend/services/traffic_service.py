@@ -124,10 +124,27 @@ class TrafficService:
                             for p in session.processes.values():
                                 p.kill()
                             
+                            # Provide helpful error messages for common failures
                             if "No such container" in stderr:
                                 raise RuntimeError(
                                     f"Container {container_name} not running. "
                                     f"Start the lab nodes before enabling traffic filters."
+                                )
+                            elif "permission denied" in stderr.lower() or "operation not permitted" in stderr.lower():
+                                raise RuntimeError(
+                                    f"Permission denied running tcpdump in {container_name}. "
+                                    f"The container needs CAP_NET_RAW capability. "
+                                    f"Check Docker container privileges."
+                                )
+                            elif "no such device" in stderr.lower():
+                                raise RuntimeError(
+                                    f"Interface {interface} not found in {container_name}. "
+                                    f"The container may still be starting up or the interface doesn't exist."
+                                )
+                            elif "tcpdump: command not found" in stderr or "executable file not found" in stderr:
+                                raise RuntimeError(
+                                    f"tcpdump not installed in {container_name}. "
+                                    f"The container image must include tcpdump for traffic capture."
                                 )
                             else:
                                 raise RuntimeError(

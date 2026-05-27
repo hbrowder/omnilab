@@ -127,7 +127,7 @@ export default function LabCanvas() {
   const [drawingShape, setDrawingShape] = useState(null) // {type, startX, startY}
 
   // CRE-68 Phase 3: WebSocket for real-time traffic animation
-  const { connected: wsConnected, events: trafficEvents, packetCounts, activeFilters: wsActiveFilters } = useTrafficWebSocket(labId)
+  const { connected: wsConnected, events: trafficEvents, packetCounts, activeFilters: wsActiveFilters, lastError: wsLastError } = useTrafficWebSocket(labId)
 
 
   // Keep refs in sync with state
@@ -1150,6 +1150,7 @@ export default function LabCanvas() {
           onClose={()=>setShowTrafficFilters(false)}
           wsConnected={wsConnected}
           packetCounts={packetCounts}
+          wsError={wsLastError}
         />
       )}
     </div>

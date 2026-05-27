@@ -14,7 +14,7 @@ import React, { useState, useEffect } from 'react'
  *  - Priority (higher = rendered first)
  */
 
-export default function TrafficFilterPanel({ labId, darkMode, onClose, wsConnected, packetCounts }) {
+export default function TrafficFilterPanel({ labId, darkMode, onClose, wsConnected, packetCounts, wsError }) {
   const [filters, setFilters] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -224,16 +224,23 @@ export default function TrafficFilterPanel({ labId, darkMode, onClose, wsConnect
         >×</button>
       </div>
 
-      {/* Error banner */}
-      {error && (
+      {/* Error banner - shows both API errors and WebSocket errors */}
+      {(error || wsError) && (
         <div style={{
           padding: '12px 20px',
-          background: '#fef2f2',
-          borderBottom: `1px solid #fecaca`,
-          color: '#dc2626',
-          fontSize: 13
+          background: darkMode ? '#7f1d1d' : '#fef2f2',
+          borderBottom: `1px solid ${darkMode ? '#991b1b' : '#fecaca'}`,
+          color: darkMode ? '#fca5a5' : '#dc2626',
+          fontSize: 13,
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 8
         }}>
-          ⚠ {error}
+          <span>⚠</span>
+          <div style={{ flex: 1 }}>
+            {error && <div>{error}</div>}
+            {wsError && <div style={{ marginTop: error ? 6 : 0 }}>{wsError}</div>}
+          </div>
         </div>
       )}
 

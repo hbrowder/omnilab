@@ -18,6 +18,7 @@ export const useTrafficWebSocket = (labId) => {
   const [events, setEvents] = useState([]);
   const [packetCounts, setPacketCounts] = useState({}); // {filter_id: count}
   const [activeFilters, setActiveFilters] = useState(new Set()); // Set of active filter_ids
+  const [lastError, setLastError] = useState(null); // Last WebSocket error message
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const shouldReconnectRef = useRef(true);
@@ -88,6 +89,9 @@ export const useTrafficWebSocket = (labId) => {
 
         case 'error':
           console.error('❌ Traffic WebSocket error:', data.message, data.filter_id);
+          setLastError(data.message);
+          // Auto-clear error after 10 seconds
+          setTimeout(() => setLastError(null), 10000);
           break;
 
         case 'heartbeat':
@@ -195,6 +199,7 @@ export const useTrafficWebSocket = (labId) => {
     events,
     packetCounts,
     activeFilters,
+    lastError,
     sendMessage,
     disconnect
   };
