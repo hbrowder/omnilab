@@ -101,6 +101,9 @@ All work is tracked in Linear under the **CRE** team. Issues are assigned to
 the engineer driving them and moved through `Backlog → Todo → In Progress →
 Done`.
 
+**Competitive Analysis:**  
+See [docs/EVE_NG_COMPETITIVE_ANALYSIS.md](docs/EVE_NG_COMPETITIVE_ANALYSIS.md) for ongoing systematic documentation of EVE-NG features, UI/UX patterns, and workflows. This analysis drives OmniLab's roadmap toward feature parity and superiority.
+
 ---
 
 ## License
