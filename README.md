@@ -22,6 +22,40 @@ Status: pre-launch, v1.0 in active development. Tracking board:
 
 ---
 
+## Features
+
+### Real-Time Traffic Visualization (Phase 3 — shipped May 2026)
+
+Watch packets flow across your topology in real time. Backend captures live
+traffic with `tcpdump` inside the running container, streams events over
+WebSocket, and the canvas renders animated colored particles along each link.
+
+- **Protocol filters** — toggle ARP, BGP, OSPF, EIGRP, STP, LLDP, ICMP, etc.;
+  each protocol gets its own color
+- **In-container capture** — no host-level packet sniffing; runs with
+  `CAP_NET_RAW` inside the lab node
+- **Live packet counters** — per-filter badge updates as packets arrive
+- **Resilient WebSocket** — auto-reconnect with exponential backoff,
+  Live/Offline status badge
+- **Actionable errors** — specific messages for permission denied, interface
+  not found, tcpdump missing, container not running (not raw stderr dumps)
+- **Performance** — event batching + throttling, particle limits to keep
+  large topologies smooth
+
+Tracked under [CRE-68](https://linear.app/harold-browder/issue/CRE-68). Ship
+reports for each milestone live in `docs/CRE-68_PHASE3_MILESTONE*.md`.
+
+### Other capabilities
+
+- KVM/QEMU + Docker-backed lab nodes with one-click deploy from templates
+- ReactFlow topology editor with persistent layout
+- Apache Guacamole console for VM remote view (RDP/VNC/SSH)
+- JWT-based multi-user auth with three roles (admin, power-user, readonly)
+- REST API for everything — migrate from EVE-NG/GNS3 with the bundled tools,
+  no more manual `fixpermissions`
+
+---
+
 ## Repository layout
 
 ```
