@@ -130,6 +130,44 @@ class FakeRepo(tools.Repo):
             "node_count": len(nodes), "link_count": len(links),
         }
 
+    # -- lifecycle (CRE-43). In this fake, node "state" doubles as "status".
+    def node_row(self, node_id: str):
+        n = self.nodes.get(node_id)
+        if not n:
+            return None
+        return {
+            "node_id": n["node_id"], "name": n["name"], "lab_id": n["lab_id"],
+            "type": n.get("type", "docker"), "image": n["image"],
+            "status": n["state"], "config": dict(n.get("config", {})),
+            "ports": n.get("config", {}).get("ports"),
+            "docker_options": n.get("config", {}).get("docker_options") or {},
+        }
+
+    def set_node_status(self, node_id: str, status: str) -> None:
+        self.nodes[node_id]["state"] = status
+
+    def set_node_config(self, node_id: str, config: dict) -> None:
+        self.nodes[node_id]["config"] = dict(config)
+
+    def lab_node_ids(self, lab_id: str):
+        return [nid for nid, n in self.nodes.items() if n["lab_id"] == lab_id]
+
+    def running_docker_nodes_in_lab(self, lab_id: str, exclude_node_id: str) -> int:
+        return sum(
+            1 for nid, n in self.nodes.items()
+            if n["lab_id"] == lab_id and nid != exclude_node_id
+            and n.get("type", "docker") == "docker" and n["state"] == "running"
+        )
+
+    def delete_lab_rows(self, lab_id: str) -> dict:
+        node_ids = [nid for nid, n in self.nodes.items() if n["lab_id"] == lab_id]
+        link_ids = [ln for ln in self.links if ln["lab_id"] == lab_id]
+        for nid in node_ids:
+            del self.nodes[nid]
+        self.links = [ln for ln in self.links if ln["lab_id"] != lab_id]
+        self.labs.pop(lab_id, None)
+        return {"nodes_removed": len(node_ids), "links_removed": len(link_ids)}
+
 
 @pytest.fixture()
 def repo():
@@ -406,3 +444,75 @@ def test_integration_build_two_node_dvwa_lab():
     ln = state["links"][0]
     assert {ln["a"]["node_id"], ln["b"]["node_id"]} == {n1, n2}
     assert ln["a"]["iface"] == "eth0" and ln["b"]["iface"] == "eth0"
+
+
+@pytest.mark.integration
+def test_integration_full_lifecycle_two_node_lab():
+    """CRE-43 acceptance: build + START a real 2-node lab end-to-end through the
+    tools (Python only — no HTTP, no LLM), confirm both running, stop both,
+    then delete the lab and assert containers + network are gone and the rows
+    were removed.
+
+    Image choice: BOTH nodes use vulnerables/web-dvwa (the "DVWA lab"). The
+    image is pulled once via the shared singleton and reused for the 2nd node,
+    so there is no slow second pull; both containers run apache and stay up. We
+    keep DVWA (not a lighter alpine) because it is the only generic small image
+    guaranteed to be in list_inventory on a fresh DB. First-run pulls may take
+    several minutes.
+    """
+    import docker
+    from api import nodes as nodes_mod
+    from api.agent import SqliteRepo
+    from services.docker_provisioner import DockerProvisioner
+
+    # Use the REAL shared provisioner singleton (no mock).
+    nodes_mod._reset_provisioner_for_tests(DockerProvisioner())
+    raw = docker.from_env()
+    repo = SqliteRepo()
+
+    lab_id = tools.create_lab(repo, "DVWA Lifecycle", "two dvwa nodes")["data"]["lab_id"]
+    n1 = tools.create_node(repo, lab_id, "dvwa-1", "vulnerables/web-dvwa")["data"]["node_id"]
+    n2 = tools.create_node(repo, lab_id, "dvwa-2", "vulnerables/web-dvwa")["data"]["node_id"]
+    tools.link_nodes(repo, lab_id, {"node_id": n1}, {"node_id": n2})
+
+    net_name = f"omnilab-lab-{lab_id}"
+    try:
+        assert tools.start_node(repo, n1)["data"]["state"] == "running"
+        assert tools.start_node(repo, n2)["data"]["state"] == "running"
+
+        # Containers actually exist and the lab network is up.
+        assert raw.containers.get(f"omnilab-{n1}")
+        assert raw.containers.get(f"omnilab-{n2}")
+        assert raw.networks.list(names=[net_name])
+
+        state = tools.get_lab_state(repo, lab_id)["data"]
+        assert all(node["state"] == "running" for node in state["nodes"])
+
+        assert tools.stop_node(repo, n1)["data"]["state"] == "stopped"
+        assert tools.stop_node(repo, n2)["data"]["state"] == "stopped"
+
+        deleted = tools.delete_lab(repo, lab_id)["data"]
+        assert deleted["deleted"] is True
+        assert deleted["nodes_removed"] == 2
+        assert deleted["links_removed"] == 1
+
+        # Containers + network gone; rows removed.
+        for nid in (n1, n2):
+            with pytest.raises(docker.errors.NotFound):
+                raw.containers.get(f"omnilab-{nid}")
+        assert raw.networks.list(names=[net_name]) == []
+        assert repo.get_lab(lab_id) is None
+        assert repo.node_row(n1) is None and repo.node_row(n2) is None
+    finally:
+        # Self-cleaning: sweep anything left behind on failure.
+        for nid in (n1, n2):
+            try:
+                raw.containers.get(f"omnilab-{nid}").remove(force=True)
+            except Exception:
+                pass
+        for net in raw.networks.list(names=[net_name]):
+            try:
+                net.remove()
+            except Exception:
+                pass
+        nodes_mod._reset_provisioner_for_tests(None)
