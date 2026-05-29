@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -50,6 +51,59 @@ DEFAULT_MAX_TOOL_CALLS = 60
 MAX_HISTORY_MESSAGES = 60
 
 _PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "lab_builder.md"
+
+
+# ============================================================================
+# Cancel registry (CRE-47 / AILB-7)
+# ============================================================================
+#
+# The build loop is a synchronous generator running inside a thread (FastAPI
+# streams it). To support an out-of-band "stop" request we keep a module-level
+# registry mapping ``run_id -> threading.Event``. The cancel HTTP route sets the
+# event; the generator polls ``is_set()`` at the top of EVERY iteration (between
+# tool-calling rounds), so a build stops gracefully BETWEEN tool calls rather
+# than mid-write. The registry entry is always cleaned up when the run ends, so
+# events never leak across runs.
+
+_CANCEL_REGISTRY: dict[str, threading.Event] = {}
+_CANCEL_LOCK = threading.Lock()
+
+
+def register_run(run_id: str) -> threading.Event:
+    """Create (or fetch) the cancel Event for ``run_id`` and register it."""
+    with _CANCEL_LOCK:
+        ev = _CANCEL_REGISTRY.get(run_id)
+        if ev is None:
+            ev = threading.Event()
+            _CANCEL_REGISTRY[run_id] = ev
+        return ev
+
+
+def request_cancel(run_id: str) -> bool:
+    """Signal a running build to stop. Returns True if the run was registered
+    (i.e. there was something to cancel), False otherwise."""
+    with _CANCEL_LOCK:
+        ev = _CANCEL_REGISTRY.get(run_id)
+        if ev is None:
+            return False
+        ev.set()
+        return True
+
+
+def is_cancelled(run_id: str | None) -> bool:
+    if not run_id:
+        return False
+    with _CANCEL_LOCK:
+        ev = _CANCEL_REGISTRY.get(run_id)
+        return bool(ev and ev.is_set())
+
+
+def unregister_run(run_id: str | None) -> None:
+    """Drop a run's cancel Event so the registry never grows unbounded."""
+    if not run_id:
+        return
+    with _CANCEL_LOCK:
+        _CANCEL_REGISTRY.pop(run_id, None)
 
 
 # ============================================================================
@@ -275,21 +329,36 @@ def run_build(repo: tools.Repo, prompt: str, *, model: str | None = None,
               max_iterations: int = DEFAULT_MAX_ITERATIONS,
               max_tokens: int = DEFAULT_MAX_TOKENS,
               max_tool_calls: int = DEFAULT_MAX_TOOL_CALLS,
-              api_key: str | None = None) -> Iterator[dict]:
+              api_key: str | None = None,
+              run_id: str | None = None) -> Iterator[dict]:
     """Drive the LLM tool-calling loop, yielding structured events.
 
-    Events: ``thinking`` {text}, ``tool_call`` {name, args},
-    ``tool_result`` {name, ok, data?/error?}, ``done`` {lab_id, summary},
-    ``error`` {message}.
+    Events: ``run_started`` {run_id}, ``thinking`` {text},
+    ``tool_call`` {name, args}, ``tool_result`` {name, ok, data?/error?},
+    ``done`` {run_id, lab_id, summary, tool_call_count, total_tokens},
+    ``cancelled`` {run_id, lab_id}, ``error`` {message}.
 
     Cost rails: ``max_tokens`` per call (default 4096), ``max_iterations``
     (default 20) and ``max_tool_calls`` caps, bounded history. On unrecoverable
     error the created lab is delete_lab'd. The API key is never leaked.
+
+    Cancellation (CRE-47): when ``run_id`` is supplied a cancel Event is
+    registered; the loop polls it at the top of every iteration AND between each
+    tool call. On cancel the partially-built lab is torn down (delete_lab) so no
+    orphaned containers are left running, matching the cost-rail philosophy, and
+    a terminal ``cancelled`` event is emitted. The registry entry is always
+    removed when the run ends.
     """
     key = api_key or _load_api_key()
     if not key:
         yield {"type": "error", "message": "OPENROUTER_API_KEY is not configured"}
         return
+
+    # Register the cancel Event up-front and announce the run_id so the client
+    # knows what to POST to /cancel. Tests can pass run_id=None to skip this.
+    if run_id:
+        register_run(run_id)
+        yield {"type": "run_started", "run_id": run_id}
 
     model = model or DEFAULT_MODEL
     # Clamp the iteration cap to something sane (never inherit a huge default).
@@ -305,10 +374,16 @@ def run_build(repo: tools.Repo, prompt: str, *, model: str | None = None,
 
     created_lab_id: str | None = None
     tool_calls_made = 0
+    total_tokens = 0
     finished = False
 
     try:
         for _ in range(max_iterations):
+            # Poll for cancellation BETWEEN iterations (after the previous
+            # round's tool calls have fully resolved). Stops gracefully.
+            if is_cancelled(run_id):
+                raise _Cancelled()
+
             messages = _trim_history(messages)
             try:
                 completion = _chat_completion(
@@ -317,6 +392,13 @@ def run_build(repo: tools.Repo, prompt: str, *, model: str | None = None,
                 )
             except httpx.HTTPError as exc:
                 raise _Unrecoverable(_redact(f"LLM request failed: {exc}", key)) from exc
+
+            # Accumulate token usage when the provider reports it (cost telemetry).
+            usage = completion.get("usage") or {}
+            try:
+                total_tokens += int(usage.get("total_tokens") or 0)
+            except (TypeError, ValueError):
+                pass
 
             choice = (completion.get("choices") or [{}])[0]
             msg = choice.get("message") or {}
@@ -330,7 +412,9 @@ def run_build(repo: tools.Repo, prompt: str, *, model: str | None = None,
             if not tool_calls:
                 summary = content or ""
                 finished = True
-                yield {"type": "done", "lab_id": created_lab_id, "summary": summary}
+                yield {"type": "done", "lab_id": created_lab_id, "summary": summary,
+                       "run_id": run_id, "tool_call_count": tool_calls_made,
+                       "total_tokens": total_tokens}
                 return
 
             # Append the assistant turn (with its tool_calls) before results.
@@ -341,6 +425,10 @@ def run_build(repo: tools.Repo, prompt: str, *, model: str | None = None,
             })
 
             for tc in tool_calls:
+                # Poll between tool calls so a cancel during a multi-call round
+                # still stops promptly (e.g. before starting the next node).
+                if is_cancelled(run_id):
+                    raise _Cancelled()
                 if tool_calls_made >= max_tool_calls:
                     raise _Unrecoverable(
                         f"tool-call cap reached ({max_tool_calls}); stopping"
@@ -384,20 +472,37 @@ def run_build(repo: tools.Repo, prompt: str, *, model: str | None = None,
             f"max_iterations ({max_iterations}) exceeded without completing the build"
         )
 
+    except _Cancelled:
+        # User asked to stop. Tear down the partially-built lab so no orphaned
+        # containers are left running (cost-rail philosophy), then emit a
+        # terminal cancelled event carrying the run_id + tallies.
+        _safe_cleanup(repo, created_lab_id)
+        yield {"type": "cancelled", "run_id": run_id, "lab_id": None,
+               "tool_call_count": tool_calls_made, "total_tokens": total_tokens}
     except _Unrecoverable as exc:
         _safe_cleanup(repo, created_lab_id)
-        yield {"type": "error", "message": _redact(str(exc), key)}
+        yield {"type": "error", "message": _redact(str(exc), key),
+               "run_id": run_id, "tool_call_count": tool_calls_made,
+               "total_tokens": total_tokens}
     except Exception as exc:  # noqa: BLE001 — last-resort guard; never leak the key
         _safe_cleanup(repo, created_lab_id)
-        yield {"type": "error", "message": _redact(f"unexpected error: {exc}", key)}
+        yield {"type": "error", "message": _redact(f"unexpected error: {exc}", key),
+               "run_id": run_id, "tool_call_count": tool_calls_made,
+               "total_tokens": total_tokens}
     finally:
+        # Always drop the registry entry so cancel Events never leak across runs.
+        unregister_run(run_id)
         if not finished:
-            # Loop ended via error path; nothing else to emit here.
+            # Loop ended via error/cancel path; nothing else to emit here.
             pass
 
 
 class _Unrecoverable(Exception):
     """Internal signal: stop the loop, clean up, emit an error event."""
+
+
+class _Cancelled(Exception):
+    """Internal signal: the run was cancelled out-of-band; stop and clean up."""
 
 
 def _dispatch(repo: tools.Repo, name: str, args: dict) -> dict:
