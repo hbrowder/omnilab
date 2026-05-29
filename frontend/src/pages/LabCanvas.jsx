@@ -14,6 +14,7 @@ const NET_DEFS = {
   bridge:   { label:'Bridge',    color:'#7c3aed' },
   nat:      { label:'NAT/Cloud', color:'#0f766e' },
   internal: { label:'Internal',  color:'#b45309' },
+  lag:      { label:'LAG/Bond',  color:'#be185d' },
 }
 
 const guessType=(n)=>{
@@ -956,6 +957,14 @@ export default function LabCanvas() {
                           <line x1="4" y1="24" x2="56" y2="24" stroke={c} strokeWidth="5"/>
                           {[12,24,36,48].map(x=><circle key={x} cx={x} cy="24" r="6" fill={c} stroke={bg} strokeWidth="1"/>)}
                         </g>
+                      :net.type==='lag'?
+                        // CRE-71: LAG/Bond — bundled parallel links between two endpoints
+                        <g>
+                          <circle cx="8" cy="24" r="6" fill={c} stroke={bg} strokeWidth="1.5"/>
+                          <circle cx="52" cy="24" r="6" fill={c} stroke={bg} strokeWidth="1.5"/>
+                          {[16,24,32].map(y=><line key={y} x1="10" y1={y} x2="50" y2={y} stroke={c} strokeWidth="2.5"/>)}
+                          <rect x="24" y="14" width="12" height="20" rx="2" fill={`${c}44`} stroke={c} strokeWidth="1.5"/>
+                        </g>
                       :
                         // Bridge/Switch icon (default)
                         <g>
@@ -1166,7 +1175,7 @@ export default function LabCanvas() {
                   onMouseEnter={e=>e.currentTarget.style.borderColor=def.color}
                   onMouseLeave={e=>e.currentTarget.style.borderColor=cbb}>
                   <div style={{fontSize:13,fontWeight:500,color:tc}}>{def.label}</div>
-                  <div style={{fontSize:11,color:sc,marginTop:2}}>{key==='nat'?'Internet/NAT — DHCP + internet':key==='internal'?'Internal L2 — isolated segment':'Bridge — connects to host'}</div>
+                  <div style={{fontSize:11,color:sc,marginTop:2}}>{key==='nat'?'Internet/NAT — DHCP + internet':key==='internal'?'Internal L2 — isolated segment':key==='lag'?'LAG/Bond — aggregated link bundle':'Bridge — connects to host'}</div>
                 </div>
               ))}
             </div>
