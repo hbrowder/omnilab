@@ -291,13 +291,14 @@ export default function LabCanvas() {
             text:'' // empty text for shapes
           }
           setTexts(p=>[...p,newShape])
-          // CRE-64: Persist to database
+          // CRE-64/71: Persist to database; swap temp id for DB id so resize/edit persist
           createTextObject(labId, {
             type, x: newShape.x, y: newShape.y,
             width, height,
             fill: drawFillColor, stroke: drawStrokeColor,
             text: '', z_index: 0
-          }).catch(err=>console.error('Failed to save shape:', err))
+          }).then(r=>{ if(r?.data?.id) setTexts(p=>p.map(tx=>tx.id===shapeId?{...tx,id:r.data.id}:tx)) })
+            .catch(err=>console.error('Failed to save shape:', err))
         }
         setDrawingShape(null)
         return
@@ -410,13 +411,16 @@ export default function LabCanvas() {
         const text = prompt('Enter text:')
         if(text){
           const textId = 'txt-'+Date.now()
-          setTexts(p=>[...p,{id:textId,text,x:cx,y:cy,type:'text'}])
-          // CRE-64: Persist text annotation to database
+          const px = gridSnapEnabled ? snap(cx) : Math.round(cx)
+          const py = gridSnapEnabled ? snap(cy) : Math.round(cy)
+          setTexts(p=>[...p,{id:textId,text,x:px,y:py,type:'text'}])
+          // CRE-64/71: Persist text annotation; swap temp id for DB id so later edits persist
           createTextObject(labId, {
-            type: 'text', x: cx, y: cy,
+            type: 'text', x: px, y: py,
             text, fill: drawFillColor, stroke: drawStrokeColor,
             z_index: 0
-          }).catch(err=>console.error('Failed to save text:', err))
+          }).then(r=>{ if(r?.data?.id) setTexts(p=>p.map(tx=>tx.id===textId?{...tx,id:r.data.id}:tx)) })
+            .catch(err=>console.error('Failed to save text:', err))
         }
         return
       }
@@ -528,7 +532,18 @@ export default function LabCanvas() {
     if(kind==='canvas')return[
       {l:'⊕  Add Node',a:()=>{setAddNodeModal(item.coords);setContextMenu(null)}},
       {l:'⊞  Add Network',a:()=>{setAddNetModal(item.coords);setContextMenu(null)}},
-      {l:'T  Add Text Label',a:()=>{const t=prompt('Label:');if(t)setTexts(p=>[...p,{id:'txt-'+Date.now(),text:t,...item.coords}]);setContextMenu(null)}},
+      {l:'T  Add Text Label',a:()=>{
+        const t=prompt('Label:')
+        if(t){
+          const x=Math.round(item.coords.x), y=Math.round(item.coords.y)
+          const tmpId='txt-'+Date.now()
+          setTexts(p=>[...p,{id:tmpId,type:'text',text:t,x,y}])
+          createTextObject(labId,{type:'text',x,y,text:t,fill:drawFillColor,stroke:drawStrokeColor,z_index:0})
+            .then(r=>{ if(r?.data?.id) setTexts(p=>p.map(tx=>tx.id===tmpId?{...tx,id:r.data.id}:tx)) })
+            .catch(err=>console.error('Failed to save text:',err))
+        }
+        setContextMenu(null)
+      }},
     ]
     if(kind==='node')return[
       {l:item.node?.status==='running'?'⬛  Stop Node':'▶  Start Node',a:()=>{setNodes(p=>p.map(n=>n.id===item.node.id?{...n,status:n.status==='running'?'stopped':'running'}:n));setContextMenu(null)}},
@@ -708,7 +723,16 @@ export default function LabCanvas() {
           {[
             {ic:'⊕',tip:'Add Node',fn:()=>setAddNodeModal({x:300,y:200})},
             {ic:'⊞',tip:'Add Network',fn:()=>setAddNetModal({x:300,y:200})},
-            {ic:'T',tip:'Add Text',fn:()=>{const t=prompt('Text:');if(t)setTexts(p=>[...p,{id:'txt-'+Date.now(),text:t,x:200,y:200}])}},
+            {ic:'T',tip:'Add Text',fn:()=>{
+              const t=prompt('Text:')
+              if(t){
+                const tmpId='txt-'+Date.now()
+                setTexts(p=>[...p,{id:tmpId,type:'text',text:t,x:200,y:200}])
+                createTextObject(labId,{type:'text',x:200,y:200,text:t,fill:drawFillColor,stroke:drawStrokeColor,z_index:0})
+                  .then(r=>{ if(r?.data?.id) setTexts(p=>p.map(tx=>tx.id===tmpId?{...tx,id:r.data.id}:tx)) })
+                  .catch(err=>console.error('Failed to save text:',err))
+              }
+            }},
             {ic:'📊',tip:'Traffic Filters',fn:()=>setShowTrafficFilters(s=>!s)}, // CRE-68
             {ic:'↺',tip:'Refresh',fn:()=>window.location.reload()},
             {ic:'⤢',tip:'Reset View',fn:()=>{panRef.current={x:80,y:40};setPan({x:80,y:40});zoomRef.current=1;setZoom(1)}},
