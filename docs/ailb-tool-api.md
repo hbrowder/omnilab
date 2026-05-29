@@ -1,6 +1,6 @@
 # AI Lab Builder — Tool API Contract
 
-**Issue:** CRE-41 (AILB-1, spike) · **Status:** reviewed & refined — awaiting sign-off on D1/D3 · **Owner:** hbrowder
+**Issue:** CRE-41 (AILB-1, spike) · **Status:** reviewed, refined & signed off (D1/D2/D3 decided 2026-05-29) · **Owner:** hbrowder
 **Consumed by:** CRE-42 (read/construct tools), CRE-43 (lifecycle tools), CRE-44 (LLM loop)
 
 This is the contract for the tools the LLM agent calls to build and run a lab from a
@@ -281,16 +281,12 @@ transport for tools = far simpler to unit-test (CRE-42 wants HTTP-level tests) a
 avoids mixing WS + SSE. CRE-41 originally floated a WS for `start_node`; this proposal
 overrides that — flag if you disagree.
 
-> **⚠ Review verdict: NEEDS YOUR SIGN-OFF (revise).** The all-sync transport is sound and is
-> exactly what CRE-42's HTTP tests want — keep it. But two sub-points are genuinely yours to
-> decide because the codebase doesn't settle them: **(D1a)** the start deadline. The live docker
-> path returns at container-*create*, not *ready*, and a first-run image pull can blow past 60s.
-> Pick one: **(i)** keep sync, raise the deadline to ~120–300s and accept a blocked HTTP thread;
-> **(ii)** keep sync at ~60s and rely on the agent polling `get_node_state` (the §7 trace already
-> does); or **(iii)** add a narrow SSE/WS channel for `start_node` only. *Recommendation: (ii)* —
-> cheapest, already reflected in the trace, deadline+poll formalized in CRE-43. **(D1b)** confirm
-> `starting` is an accepted third return value (not an error). The async-DB bridge is **not** a
-> decision — it's settled mechanics, see §8.
+> **✅ DECIDED (2026-05-29): all tools sync; the agent polls.** `start_node` returns promptly with
+> `state ∈ {running, starting, error}` and does **not** block on a long pull; when it returns
+> `starting`, the agent **polls `get_node_state`** until `running` (exactly the §7 trace). `starting`
+> is a **first-class, non-error** return value. No second transport — the only streaming is the
+> overall-run SSE in CRE-44. CRE-43 formalizes a bounded poll/deadline helper; CRE-42 needs no
+> change here. The sync-tool-over-async-DB bridge is settled mechanics, not a decision — see §8.
 
 **D2 — Expose raw `run_command` (docker exec / QEMU console)? PROPOSED: no, not in
 v1.** Scope tightly to `push_config` + lifecycle. *Rationale:* a general shell tool is a
@@ -308,13 +304,11 @@ behind an explicit operator-enabled flag.
 **D3 — How the agent sees the topology. PROPOSED: `get_lab_state(lab_id)` → JSON**
 (defined in §2). Accepted as designed.
 
-> **⚠ Review verdict: NEEDS YOUR SIGN-OFF (shape).** The *decision* (a JSON topology read) is
-> right, but it overlaps an existing endpoint, so confirm the **shape policy**: `GET
-> /api/labs/{lab_id}/topology` already returns `{nodes, links}` from the DB. Choose: **(i)** keep
-> `get_lab_state` as a thin reshaper over that endpoint (recommended — single source of truth, the
-> reshape rules are in §2's refined note: `status→state`, derived `ifaces`, `{a,b}` link form,
-> counts), or **(ii)** let the agent consume the raw `/topology` shape directly and drop the bespoke
-> envelope. *Recommendation: (i).*
+> **✅ DECIDED (2026-05-29): thin reshaper.** `get_lab_state` is a thin adapter over the existing
+> `GET /api/labs/{lab_id}/topology` (single source of truth), applying the §2 reshape rules:
+> `status→state`, `ifaces` derived from the `links` table + image `default_ifaces`, link rows
+> reshaped to `{a:{node_id,iface}, b:{node_id,iface}}`, and `node_count`/`link_count` via `COUNT(*)`.
+> The agent never sees raw DB column names.
 
 ---
 
