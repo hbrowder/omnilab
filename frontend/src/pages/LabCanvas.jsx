@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTopology, getLab, addNode, deleteNode, getTextObjects, createTextObject, updateTextObject, deleteTextObject } from '../utils/api'
+import { getTopology, getLab, addNode, deleteNode, updateNode, getTextObjects, createTextObject, updateTextObject, deleteTextObject } from '../utils/api'
 import { useStore } from '../store'
 import { VENDORS, VENDOR_GROUPS, NodeIcon, VendorBadge } from '../components/VendorIcons'
 import NodePanel from '../components/NodePanel'
@@ -122,9 +122,17 @@ export default function LabCanvas() {
   
   // CRE-64: Drawing tools state
   const [drawingTool, setDrawingTool] = useState('select')
-  const [drawFillColor, setDrawFillColor] = useState('rgba(88,166,255,0.3)')
+  const [drawFillColor, setDrawFillColor] = useState('rgba(88,166,255,0.15)')
   const [drawStrokeColor, setDrawStrokeColor] = useState('rgba(88,166,255,1)')
   const [drawingShape, setDrawingShape] = useState(null) // {type, startX, startY}
+
+  // CRE-71: Snap-to-grid
+  const [gridSnapEnabled, setGridSnapEnabled] = useState(false)
+  const GRID_SIZE = 20
+  const snap = (v) => Math.round(v / GRID_SIZE) * GRID_SIZE
+
+  // CRE-71: Align modal
+  const [alignMenuOpen, setAlignMenuOpen] = useState(false)
 
   // CRE-68 Phase 3: WebSocket for real-time traffic animation
   const { connected: wsConnected, events: trafficEvents, packetCounts, activeFilters: wsActiveFilters, lastError: wsLastError } = useTrafficWebSocket(labId)
@@ -227,18 +235,35 @@ export default function LabCanvas() {
       }
       const d=draggingRef.current
       if(d){
+        // CRE-71: Container resize via corner/edge handles
+        if(d.kind==='resize'){
+          const o=d.origin // {x,y,width,height}
+          let nx=o.x, ny=o.y, nw=o.width, nh=o.height
+          const cx2 = gridSnapEnabled ? snap(c.x) : c.x
+          const cy2 = gridSnapEnabled ? snap(c.y) : c.y
+          // handle codes: combination of n/s and w/e
+          if(d.handle.includes('e')) nw = Math.max(20, cx2 - o.x)
+          if(d.handle.includes('s')) nh = Math.max(20, cy2 - o.y)
+          if(d.handle.includes('w')){ const right=o.x+o.width; nx=Math.min(cx2,right-20); nw=right-nx }
+          if(d.handle.includes('n')){ const bottom=o.y+o.height; ny=Math.min(cy2,bottom-20); nh=bottom-ny }
+          setTexts(p=>p.map(t=>t.id===d.id?{...t,x:nx,y:ny,width:nw,height:nh}:t))
+          return
+        }
         const nx=c.x-dragOffsetRef.current.x
         const ny=c.y-dragOffsetRef.current.y
+        // CRE-71: live snap-to-grid feedback while dragging
+        const fx = gridSnapEnabled ? snap(nx) : nx
+        const fy = gridSnapEnabled ? snap(ny) : ny
         if(d.kind==='node'){
-          nodesRef.current=nodesRef.current.map(n=>n.id===d.id?{...n,x:nx,y:ny}:n)
+          nodesRef.current=nodesRef.current.map(n=>n.id===d.id?{...n,x:fx,y:fy}:n)
           setNodes([...nodesRef.current])
         }
         if(d.kind==='net'){
-          networksRef.current=networksRef.current.map(n=>n.id===d.id?{...n,x:nx,y:ny}:n)
+          networksRef.current=networksRef.current.map(n=>n.id===d.id?{...n,x:fx,y:fy}:n)
           setNetworks([...networksRef.current])
         }
         if(d.kind==='text'){
-          setTexts(p=>p.map(t=>t.id===d.id?{...t,x:nx,y:ny}:t))
+          setTexts(p=>p.map(t=>t.id===d.id?{...t,x:fx,y:fy}:t))
         }
       }
     }
@@ -280,14 +305,41 @@ export default function LabCanvas() {
       setSelBox(null)
       isPanning.current=false
       if(draggingRef.current){
-        // CRE-64: Persist text object position after drag
-        if(draggingRef.current.kind === 'text'){
-          const draggedObj = texts.find(t => t.id === draggingRef.current.id)
+        const dr = draggingRef.current
+        // CRE-71: Persist container resize (textobjects table: x/y/width/height)
+        if(dr.kind === 'resize'){
+          const obj = texts.find(t => t.id === dr.id)
+          if(obj){
+            updateTextObject(labId, obj.id, {
+              x: Math.round(obj.x), y: Math.round(obj.y),
+              width: Math.round(obj.width), height: Math.round(obj.height)
+            }).catch(err=>console.error('Failed to persist resize:', err))
+          }
+          draggingRef.current=null
+          return
+        }
+        // CRE-64/71: Persist text/shape object position after drag (snap already applied live)
+        if(dr.kind === 'text'){
+          const draggedObj = texts.find(t => t.id === dr.id)
           if(draggedObj){
             updateTextObject(labId, draggedObj.id, {
-              x: draggedObj.x,
-              y: draggedObj.y
+              x: Math.round(draggedObj.x),
+              y: Math.round(draggedObj.y)
             }).catch(err=>console.error('Failed to update position:', err))
+          }
+        }
+        // CRE-71: Snap-to-grid on node drag release + persist position via updateNode
+        if(dr.kind === 'node'){
+          if(gridSnapEnabled){
+            nodesRef.current = nodesRef.current.map(n =>
+              n.id === dr.id ? {...n, x: snap(n.x), y: snap(n.y)} : n
+            )
+            setNodes([...nodesRef.current])
+          }
+          const movedNode = nodesRef.current.find(n => n.id === dr.id)
+          if(movedNode && !String(movedNode.id).startsWith('tmp-')){
+            updateNode(movedNode.id, Math.round(movedNode.x), Math.round(movedNode.y))
+              .catch(err=>console.error('Failed to persist node position:', err))
           }
         }
         draggingRef.current=null
@@ -496,14 +548,29 @@ export default function LabCanvas() {
       {l:'🗑  Delete',col:'#dc2626',a:()=>{setNetworks(p=>p.filter(n=>n.id!==item.net.id));setContextMenu(null)}},
     ]
     if(kind==='link')return[
-      {l:'— Solid',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'solid'}:l));setContextMenu(null)}},
-      {l:'- - Dashed',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'dashed'}:l));setContextMenu(null)}},
+      {l:'✎  Set Label',a:()=>{
+        const v=prompt('Link label (e.g. 10.0.0.0/24):',item.link.label||'')
+        if(v!==null) setLinks(p=>p.map(l=>l.id===item.link.id?{...l,label:v}:l))
+        setContextMenu(null)
+      }},
+      {l:'🎨  Set Color',a:()=>{
+        const v=prompt('Hex color (e.g. #ff0000):',item.link.color||'#94a3b8')
+        if(v!==null) setLinks(p=>p.map(l=>l.id===item.link.id?{...l,color:v}:l))
+        setContextMenu(null)
+      }},
+      {l:'── Solid',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'Solid'}:l));setContextMenu(null)}},
+      {l:'- - Dashed',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'Dashed'}:l));setContextMenu(null)}},
       {l:'··· Dotted',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'dotted'}:l));setContextMenu(null)}},
+      {l:'📐 Straight',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,linkstyle:'Straight'}:l));setContextMenu(null)}},
+      {l:'〜 Bezier',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,linkstyle:'Bezier'}:l));setContextMenu(null)}},
+      {l:'⌐ Flowchart',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,linkstyle:'Flowchart'}:l));setContextMenu(null)}},
       {l:'🗑  Delete Link',col:'#dc2626',a:()=>{setLinks(p=>p.filter(l=>l.id!==item.link.id));setContextMenu(null)}},
     ]
-    if(kind==='text')return[
-      {l:'✎  Edit Text',a:()=>{
-        const v=prompt('Edit text:',item.text?.text||'')
+    if(kind==='text'){
+      const isShape = item.text?.type==='rectangle' || item.text?.type==='circle'
+      return[
+      {l: isShape ? '✎  Edit Label' : '✎  Edit Text',a:()=>{
+        const v=prompt(isShape?'Container label (e.g. DMZ, POD-1, Core):':'Edit text:',item.text?.text||'')
         if(v!==null){
           setTexts(p=>p.map(t=>t.id===item.text.id?{...t,text:v}:t))
           updateTextObject(labId, item.text.id, {text:v}).catch(err=>console.error('Failed to update text:', err))
@@ -515,7 +582,8 @@ export default function LabCanvas() {
         deleteTextObject(labId, item.text.id).catch(err=>console.error('Failed to delete:', err))
         setContextMenu(null)
       }},
-    ]
+      ]
+    }
     return[]
   }
 
@@ -542,6 +610,87 @@ export default function LabCanvas() {
         </button>
         <div style={{flex:1}}/>
         <span style={{fontSize:11,color:sc,background:darkMode?'#0f172a':'#f1f5f9',padding:'2px 8px',borderRadius:4,border:'1px solid '+bc}}>{runCount}/{nodes.length} running</span>
+        {/* CRE-71: Snap-to-grid toggle */}
+        <button onClick={()=>setGridSnapEnabled(g=>!g)}
+          title="Snap to grid (20px)"
+          style={{fontSize:11,padding:'3px 10px',border:'1px solid '+(gridSnapEnabled?'#3b82f6':bc),borderRadius:4,background:gridSnapEnabled?(darkMode?'#1e3a5f':'#eff6ff'):'transparent',color:gridSnapEnabled?'#3b82f6':sc,cursor:'pointer'}}>
+          ⊞ {gridSnapEnabled?'Snap ON':'Snap OFF'}
+        </button>
+        {/* CRE-71: Align/distribute (only when 2+ nodes selected) */}
+        {selected.size>=2&&(
+          <div style={{position:'relative'}}>
+            <button onClick={()=>setAlignMenuOpen(o=>!o)}
+              style={{fontSize:11,padding:'3px 10px',border:'1px solid #7c3aed',borderRadius:4,background:darkMode?'#2e1065':'#f5f3ff',color:'#7c3aed',cursor:'pointer'}}>
+              ⚖ Align ({selected.size})
+            </button>
+            {alignMenuOpen&&(
+              <div style={{position:'absolute',top:28,right:0,background:cb,border:'1px solid '+cbb,borderRadius:8,boxShadow:'0 4px 24px rgba(0,0,0,0.15)',zIndex:999,minWidth:180,overflow:'hidden',fontFamily:'sans-serif'}}>
+                {[
+                  {l:'⬅ Align Left',fn:()=>{
+                    const sel=nodes.filter(n=>selected.has(n.id))
+                    const minX=Math.min(...sel.map(n=>n.x))
+                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,x:minX}:n))
+                    setAlignMenuOpen(false)
+                  }},
+                  {l:'➡ Align Right',fn:()=>{
+                    const sel=nodes.filter(n=>selected.has(n.id))
+                    const maxX=Math.max(...sel.map(n=>n.x))
+                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,x:maxX}:n))
+                    setAlignMenuOpen(false)
+                  }},
+                  {l:'⬆ Align Top',fn:()=>{
+                    const sel=nodes.filter(n=>selected.has(n.id))
+                    const minY=Math.min(...sel.map(n=>n.y))
+                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,y:minY}:n))
+                    setAlignMenuOpen(false)
+                  }},
+                  {l:'⬇ Align Bottom',fn:()=>{
+                    const sel=nodes.filter(n=>selected.has(n.id))
+                    const maxY=Math.max(...sel.map(n=>n.y))
+                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,y:maxY}:n))
+                    setAlignMenuOpen(false)
+                  }},
+                  {l:'↔ Center Horizontal',fn:()=>{
+                    const sel=nodes.filter(n=>selected.has(n.id))
+                    const cx=(Math.min(...sel.map(n=>n.x))+Math.max(...sel.map(n=>n.x)))/2
+                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,x:cx}:n))
+                    setAlignMenuOpen(false)
+                  }},
+                  {l:'↕ Center Vertical',fn:()=>{
+                    const sel=nodes.filter(n=>selected.has(n.id))
+                    const cy=(Math.min(...sel.map(n=>n.y))+Math.max(...sel.map(n=>n.y)))/2
+                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,y:cy}:n))
+                    setAlignMenuOpen(false)
+                  }},
+                  {l:'— Distribute Horizontally',fn:()=>{
+                    const sel=[...nodes.filter(n=>selected.has(n.id))].sort((a,b)=>a.x-b.x)
+                    if(sel.length<3){setAlignMenuOpen(false);return}
+                    const span=sel[sel.length-1].x-sel[0].x
+                    const step=span/(sel.length-1)
+                    const posMap={}
+                    sel.forEach((n,i)=>{posMap[n.id]=sel[0].x+i*step})
+                    setNodes(p=>p.map(n=>posMap[n.id]!==undefined?{...n,x:posMap[n.id]}:n))
+                    setAlignMenuOpen(false)
+                  }},
+                  {l:'| Distribute Vertically',fn:()=>{
+                    const sel=[...nodes.filter(n=>selected.has(n.id))].sort((a,b)=>a.y-b.y)
+                    if(sel.length<3){setAlignMenuOpen(false);return}
+                    const span=sel[sel.length-1].y-sel[0].y
+                    const step=span/(sel.length-1)
+                    const posMap={}
+                    sel.forEach((n,i)=>{posMap[n.id]=sel[0].y+i*step})
+                    setNodes(p=>p.map(n=>posMap[n.id]!==undefined?{...n,y:posMap[n.id]}:n))
+                    setAlignMenuOpen(false)
+                  }},
+                ].map(item=>(
+                  <div key={item.l} onClick={item.fn} style={{padding:'8px 14px',fontSize:12,color:tc,cursor:'pointer',borderBottom:'1px solid '+bc}}
+                    onMouseEnter={e=>e.currentTarget.style.background=darkMode?'#334155':'#f8fafc'}
+                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}>{item.l}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <button onClick={()=>setDarkMode(d=>!d)} style={{fontSize:11,padding:'3px 10px',border:'1px solid '+bc,borderRadius:4,background:'transparent',color:sc,cursor:'pointer'}}>{darkMode?'☀':'🌙'}</button>
         <button onClick={()=>setHideLabels(h=>!h)} style={{fontSize:11,padding:'3px 10px',border:'1px solid '+bc,borderRadius:4,background:'transparent',color:sc,cursor:'pointer'}}>{hideLabels?'Show Labels':'Hide Labels'}</button>
         <button onClick={()=>navigate('/')} style={{fontSize:11,padding:'3px 10px',border:'1px solid '+bc,borderRadius:4,background:'transparent',color:sc,cursor:'pointer'}}>✕ Close</button>
@@ -583,6 +732,75 @@ export default function LabCanvas() {
             <rect width="100%" height="100%" fill="url(#lg)" data-canvas="1"/>
 
             <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
+
+              {/* CRE-71: Container shapes rendered FIRST (behind everything) */}
+              {texts.filter(t=>t.type==='rectangle'||t.type==='circle').map(t=>{
+                const isSel = selected instanceof Set ? selected.has(t.id) : selected===t.id
+                // CRE-71: 8 resize handles (corners + edges) shown when container selected
+                const handles = isSel ? [
+                  {h:'nw',x:t.x,           y:t.y,           cur:'nwse-resize'},
+                  {h:'n', x:t.x+t.width/2, y:t.y,           cur:'ns-resize'},
+                  {h:'ne',x:t.x+t.width,   y:t.y,           cur:'nesw-resize'},
+                  {h:'e', x:t.x+t.width,   y:t.y+t.height/2,cur:'ew-resize'},
+                  {h:'se',x:t.x+t.width,   y:t.y+t.height,  cur:'nwse-resize'},
+                  {h:'s', x:t.x+t.width/2, y:t.y+t.height,  cur:'ns-resize'},
+                  {h:'sw',x:t.x,           y:t.y+t.height,  cur:'nesw-resize'},
+                  {h:'w', x:t.x,           y:t.y+t.height/2,cur:'ew-resize'},
+                ] : []
+                const startResize=(e,handle)=>{
+                  e.stopPropagation()
+                  draggingRef.current={kind:'resize',id:t.id,handle,origin:{x:t.x,y:t.y,width:t.width,height:t.height}}
+                  setContextMenu(null)
+                }
+                const handleRects = handles.map(hh=>(
+                  <rect key={hh.h} x={hh.x-4} y={hh.y-4} width={8} height={8}
+                    fill="#fff" stroke={t.stroke||'#3b82f6'} strokeWidth={1.5}
+                    style={{cursor:hh.cur}}
+                    onMouseDown={e=>startResize(e,hh.h)}/>
+                ))
+                if(t.type==='rectangle'){
+                  return(
+                    <g key={t.id}>
+                      <rect x={t.x} y={t.y} width={t.width} height={t.height}
+                        fill={t.fill} stroke={t.stroke} strokeWidth={isSel?2.5:2} strokeDasharray="8,4" rx={6}
+                        onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
+                        onContextMenu={e=>{e.preventDefault();e.stopPropagation();setSelected(t.id);setContextMenu({x:e.clientX,y:e.clientY,kind:'text',text:t})}}
+                        style={{cursor:'move'}}/>
+                      {/* Header label bar */}
+                      {t.text&&(
+                        <g>
+                          <rect x={t.x} y={t.y} width={t.width} height={22} rx={6}
+                            fill={t.stroke} opacity={0.85} style={{pointerEvents:'none'}}/>
+                          <text x={t.x+t.width/2} y={t.y+15} textAnchor="middle" fontSize={12}
+                            fill="#fff" fontWeight="600" fontFamily="sans-serif" style={{pointerEvents:'none'}}>
+                            {t.text}
+                          </text>
+                        </g>
+                      )}
+                      {handleRects}
+                    </g>
+                  )
+                } else {
+                  return(
+                    <g key={t.id}>
+                      <ellipse
+                        cx={t.x+t.width/2} cy={t.y+t.height/2}
+                        rx={t.width/2} ry={t.height/2}
+                        fill={t.fill} stroke={t.stroke} strokeWidth={isSel?2.5:2} strokeDasharray="8,4"
+                        onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
+                        onContextMenu={e=>{e.preventDefault();e.stopPropagation();setSelected(t.id);setContextMenu({x:e.clientX,y:e.clientY,kind:'text',text:t})}}
+                        style={{cursor:'move'}}/>
+                      {t.text&&(
+                        <text x={t.x+t.width/2} y={t.y+15} textAnchor="middle" fontSize={12}
+                          fill={t.stroke} fontWeight="600" fontFamily="sans-serif" style={{pointerEvents:'none'}}>
+                          {t.text}
+                        </text>
+                      )}
+                      {handleRects}
+                    </g>
+                  )
+                }
+              })}
 
               {links.map(link=>{
                 const src=nodes.find(n=>n.id===link.srcId)
@@ -814,34 +1032,16 @@ export default function LabCanvas() {
               })}
 
               {texts.map(t=>{
-                // CRE-64: Render shapes (rectangles/circles) or text
-                if(t.type === 'rectangle'){
-                  return (
-                    <rect key={t.id} x={t.x} y={t.y} width={t.width} height={t.height}
-                      fill={t.fill} stroke={t.stroke} strokeWidth={2}
-                      onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
-                      onContextMenu={e=>{e.preventDefault();e.stopPropagation();setContextMenu({x:e.clientX,y:e.clientY,kind:'text',text:t})}}
-                      style={{cursor:'move'}}/>
-                  )
-                } else if(t.type === 'circle'){
-                  return (
-                    <ellipse key={t.id}
-                      cx={t.x + t.width/2} cy={t.y + t.height/2}
-                      rx={t.width/2} ry={t.height/2}
-                      fill={t.fill} stroke={t.stroke} strokeWidth={2}
-                      onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
-                      onContextMenu={e=>{e.preventDefault();e.stopPropagation();setContextMenu({x:e.clientX,y:e.clientY,kind:'text',text:t})}}
-                      style={{cursor:'move'}}/>
-                  )
-                } else {
-                  // Regular text
-                  return (
-                    <text key={t.id} x={t.x} y={t.y} fontSize={t.size||14} fill={tc} fontFamily="sans-serif"
-                      onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
-                      onContextMenu={e=>{e.preventDefault();e.stopPropagation();setContextMenu({x:e.clientX,y:e.clientY,kind:'text',text:t})}}
-                      onDoubleClick={()=>{const v=prompt('Edit:',t.text);if(v!==null){setTexts(p=>p.map(tx=>tx.id===t.id?{...tx,text:v}:tx));updateTextObject(labId,t.id,{text:v}).catch(err=>console.error('Update failed:',err))}}} style={{cursor:'move'}}>{t.text}</text>
-                  )
-                }
+                // CRE-71: Shapes are now rendered BEFORE nodes for correct z-order.
+                // This section only renders text annotations.
+                if(t.type === 'rectangle' || t.type === 'circle') return null
+                // Regular text
+                return (
+                  <text key={t.id} x={t.x} y={t.y} fontSize={t.size||14} fill={tc} fontFamily="sans-serif"
+                    onMouseDown={e=>startDrag(e,'text',t.id,t.x,t.y)}
+                    onContextMenu={e=>{e.preventDefault();e.stopPropagation();setContextMenu({x:e.clientX,y:e.clientY,kind:'text',text:t})}}
+                    onDoubleClick={()=>{const v=prompt('Edit:',t.text);if(v!==null){setTexts(p=>p.map(tx=>tx.id===t.id?{...tx,text:v}:tx));updateTextObject(labId,t.id,{text:v}).catch(err=>console.error('Update failed:',err))}}} style={{cursor:'move'}}>{t.text}</text>
+                )
               })}
               
               {/* CRE-64: Preview shape being drawn */}
