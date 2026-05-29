@@ -53,11 +53,48 @@ _PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "lab_builder
 
 
 # ============================================================================
-# API key handling — env first, then ~/.omnilab/.env (read-only here).
-# AILB-5/CRE-45 owns WRITING that file; we only READ it if present.
+# Credential resolution — CRE-45.
+# Prefer the encrypted stored config (~/.omnilab/.ai_provider.json, written by
+# the BYO-key settings endpoint), then fall back to env OPENROUTER_API_KEY, then
+# ~/.omnilab/.env (legacy). The stored config also supplies provider/model/
+# base_url so the runner targets whatever provider the operator configured.
+# The key is NEVER logged and is redacted from anything surfaced to the client.
 # ============================================================================
 
+def _resolve_config() -> dict | None:
+    """Return {api_key, model, base_url, provider} resolved from (in order):
+    the stored encrypted config, env OPENROUTER_API_KEY, then ~/.omnilab/.env.
+    Returns None if no key can be found anywhere."""
+    # 1. Stored BYO-key config (decrypted, in-process only).
+    try:
+        from services import ai_provider
+        creds = ai_provider.resolve_credentials()
+    except Exception:  # noqa: BLE001 — config layer must never break the runner
+        creds = None
+    if creds and creds.get("api_key"):
+        base = (creds.get("base_url") or "").rstrip("/")
+        return {
+            "api_key": creds["api_key"],
+            "model": creds.get("model") or DEFAULT_MODEL,
+            "base_url": (base + "/chat/completions") if base else OPENROUTER_URL,
+            "provider": creds.get("provider") or "openrouter",
+        }
+
+    # 2 & 3. Env / legacy ~/.omnilab/.env -> OpenRouter only.
+    key = _load_api_key()
+    if key:
+        return {
+            "api_key": key,
+            "model": DEFAULT_MODEL,
+            "base_url": OPENROUTER_URL,
+            "provider": "openrouter",
+        }
+    return None
+
+
 def _load_api_key() -> str | None:
+    """Legacy/env-only key lookup: env OPENROUTER_API_KEY, then ~/.omnilab/.env.
+    Kept as a stable, mockable seam for existing tests."""
     key = os.environ.get("OPENROUTER_API_KEY")
     if key:
         return key.strip() or None
@@ -221,6 +258,7 @@ def build_tools_schema() -> list[dict]:
 
 def _chat_completion(*, api_key: str, model: str, messages: list[dict],
                      tools_schema: list[dict], max_tokens: int,
+                     url: str = OPENROUTER_URL,
                      timeout: float = 60.0) -> dict:
     """POST one chat/completions request and return the parsed JSON.
 
@@ -240,7 +278,7 @@ def _chat_completion(*, api_key: str, model: str, messages: list[dict],
         "tool_choice": "auto",
         "max_tokens": max_tokens,
     }
-    resp = httpx.post(OPENROUTER_URL, headers=headers, json=payload, timeout=timeout)
+    resp = httpx.post(url, headers=headers, json=payload, timeout=timeout)
     resp.raise_for_status()
     return resp.json()
 
@@ -286,10 +324,24 @@ def run_build(repo: tools.Repo, prompt: str, *, model: str | None = None,
     (default 20) and ``max_tool_calls`` caps, bounded history. On unrecoverable
     error the created lab is delete_lab'd. The API key is never leaked.
     """
-    key = api_key or _load_api_key()
-    if not key:
-        yield {"type": "error", "message": "OPENROUTER_API_KEY is not configured"}
-        return
+    # Credential resolution (CRE-45): an explicit api_key arg wins (env-style,
+    # OpenRouter URL); otherwise resolve from the stored BYO-key config, then
+    # env. The resolved config supplies the model/base_url too.
+    url = OPENROUTER_URL
+    if api_key:
+        key = api_key
+    else:
+        cfg = _resolve_config()
+        if not cfg:
+            yield {"type": "error",
+                   "message": "No AI provider configured (set one in Settings "
+                              "or via OPENROUTER_API_KEY). "
+                              "Configure your AI provider in Settings."}
+            return
+        key = cfg["api_key"]
+        url = cfg["base_url"]
+        if model is None:
+            model = cfg["model"]
 
     model = model or DEFAULT_MODEL
     # Clamp the iteration cap to something sane (never inherit a huge default).
@@ -314,6 +366,7 @@ def run_build(repo: tools.Repo, prompt: str, *, model: str | None = None,
                 completion = _chat_completion(
                     api_key=key, model=model, messages=messages,
                     tools_schema=tools_schema, max_tokens=max_tokens,
+                    url=url,
                 )
             except httpx.HTTPError as exc:
                 raise _Unrecoverable(_redact(f"LLM request failed: {exc}", key)) from exc

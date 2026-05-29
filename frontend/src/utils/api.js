@@ -36,6 +36,13 @@ export const provisionWsUrl = (nodeId) => {
   return `${proto}//${window.location.host}/api/nodes/${nodeId}/provision-ws`
 }
 
+// CRE-45 / AILB-5 — BYO-key AI provider config.
+// GET never returns the api_key (only api_key_set bool). POST is write-only for
+// the key. /agent/test pings the configured provider.
+export const getAIProvider = () => api.get('/settings/ai-provider')
+export const saveAIProvider = (data) => api.post('/settings/ai-provider', data)
+export const testAIProvider = () => api.post('/agent/test')
+
 // CRE-64: Drawing Tools - Text Objects API
 export const getTextObjects = (labId) => api.get(`/labs/${labId}/textobjects`)
 export const createTextObject = (labId, data) => api.post(`/labs/${labId}/textobjects`, data)

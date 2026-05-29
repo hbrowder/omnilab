@@ -28,6 +28,9 @@ dist/
 backend/.license_secret
 backend/.license.json
 backend/.updates_state.json
+# CRE-45: BYO-key AI provider config (encrypted at rest, never committed)
+.ai_provider.json
+backend/.ai_provider.json
 
 # OS
 .DS_Store
