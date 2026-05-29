@@ -344,6 +344,80 @@ class SqliteRepo(tools.Repo):
             "link_count": len(link_rows),
         }
 
+    # -- lifecycle (CRE-43) --------------------------------------------------
+    def node_row(self, node_id: str) -> dict | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM nodes WHERE id = ?", (node_id,)
+            ).fetchone()
+            if not row:
+                return None
+            n = dict(row)
+        import json as _json
+        try:
+            cfg = _json.loads(n.get("config") or "{}") or {}
+        except (TypeError, ValueError):
+            cfg = {}
+        return {
+            "node_id": n["id"],
+            "name": n.get("name"),
+            "lab_id": n.get("lab_id"),
+            "type": n.get("type"),
+            "image": n.get("image"),
+            "status": n.get("status"),
+            "config": cfg,
+            "ports": cfg.get("ports"),
+            "docker_options": cfg.get("docker_options") or {},
+        }
+
+    def set_node_status(self, node_id: str, status: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE nodes SET status = ? WHERE id = ?", (status, node_id)
+            )
+            conn.commit()
+
+    def set_node_config(self, node_id: str, config: dict) -> None:
+        import json as _json
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE nodes SET config = ? WHERE id = ?",
+                (_json.dumps(config or {}), node_id),
+            )
+            conn.commit()
+
+    def lab_node_ids(self, lab_id: str) -> list[str]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT id FROM nodes WHERE lab_id = ?", (lab_id,)
+            ).fetchall()
+        return [r["id"] for r in rows]
+
+    def running_docker_nodes_in_lab(self, lab_id: str, exclude_node_id: str) -> int:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) AS n FROM nodes "
+                "WHERE lab_id = ? AND lower(type) = 'docker' "
+                "AND status = 'running' AND id != ?",
+                (lab_id, exclude_node_id),
+            ).fetchone()
+        return row["n"] if row else 0
+
+    def delete_lab_rows(self, lab_id: str) -> dict:
+        with self._connect() as conn:
+            n_links = conn.execute(
+                "SELECT COUNT(*) AS n FROM links WHERE lab_id = ?", (lab_id,)
+            ).fetchone()["n"]
+            n_nodes = conn.execute(
+                "SELECT COUNT(*) AS n FROM nodes WHERE lab_id = ?", (lab_id,)
+            ).fetchone()["n"]
+            # Explicit deletes (FK cascade may also cover links/nodes, but be safe).
+            conn.execute("DELETE FROM links WHERE lab_id = ?", (lab_id,))
+            conn.execute("DELETE FROM nodes WHERE lab_id = ?", (lab_id,))
+            conn.execute("DELETE FROM labs WHERE id = ?", (lab_id,))
+            conn.commit()
+        return {"nodes_removed": n_nodes, "links_removed": n_links}
+
 
 # Map the DB nodes.status text onto the contract state enum.
 _STATE_MAP = {
