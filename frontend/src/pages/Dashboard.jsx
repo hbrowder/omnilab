@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getLabs } from '../utils/api'
 import { useStore } from '../store'
+import AIBuilderPanel from '../components/AIBuilder/AIBuilderPanel'
 
 const TEMPLATES = [
   { id:'wazuh-soc',   name:'Wazuh SOC Lab',  desc:'SIEM + threat detection', color:'#dc2626' },
@@ -22,6 +23,7 @@ export default function Dashboard() {
   const { labs, setLabs } = useStore()
   const [loading, setLoading] = useState(true)
   const [dismissed, setDismissed] = useState(new Set())
+  const [aiOpen, setAiOpen] = useState(false)
 
   useEffect(() => {
     getLabs()
@@ -39,6 +41,28 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding:28, overflowY:'auto', height:'100%', boxSizing:'border-box', fontFamily:'system-ui,sans-serif' }}>
+
+      {/* CRE-46 — Build with AI banner */}
+      <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:24,
+        background:'linear-gradient(90deg,#1b1235,#161b22)', border:'1px solid #30363d',
+        borderRadius:12, padding:'18px 22px' }}>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:15, fontWeight:700, color:'#e6edf3' }}>✨ Build a lab with AI</div>
+          <div style={{ fontSize:12, color:'#8b949e', marginTop:4 }}>
+            Describe the network you want in plain English — the AI assembles nodes, links and configs for you.
+          </div>
+        </div>
+        <button onClick={() => setAiOpen(true)}
+          style={{ background:'#8957e5', border:'1px solid #a371f7', borderRadius:8,
+            color:'#fff', fontSize:13, fontWeight:600, padding:'10px 18px', cursor:'pointer',
+            whiteSpace:'nowrap' }}
+          onMouseEnter={e => e.currentTarget.style.background='#9a6cf0'}
+          onMouseLeave={e => e.currentTarget.style.background='#8957e5'}>
+          ✨ Build with AI
+        </button>
+      </div>
+
+      <AIBuilderPanel open={aiOpen} onClose={() => setAiOpen(false)} />
 
       {/* Stats */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16, marginBottom:28 }}>

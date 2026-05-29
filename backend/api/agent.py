@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from core.config import settings
@@ -31,6 +32,10 @@ from services import agent_tools as tools
 from services.agent_tools import AILBError, err
 
 router = APIRouter(prefix="/api/agent", tags=["agent"])
+
+
+def _utcnow() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 # ============================================================================
@@ -445,6 +450,63 @@ def get_repo() -> tools.Repo:
     return SqliteRepo()
 
 
+# ============================================================================
+# CRE-47 (AILB-7) — agent_runs persistence (run history + cancel/re-run UI).
+#
+# Kept separate from the tool ``Repo`` (which is about lab topology). A
+# short-lived sqlite3 connection per call, same pattern as SqliteRepo. Tests
+# override ``get_run_store`` via app.dependency_overrides.
+# ============================================================================
+
+class AgentRunStore:
+    """CRUD for the agent_runs table backed by synchronous sqlite3."""
+
+    def __init__(self, db_path: str | None = None):
+        self._db_path = db_path or str(settings.DB_PATH)
+
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self._db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def start_run(self, run_id: str, prompt: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO agent_runs "
+                "(id, prompt, status, lab_id, started_at, completed_at, "
+                " tool_call_count, total_tokens) "
+                "VALUES (?, ?, 'running', NULL, ?, NULL, 0, 0)",
+                (run_id, prompt, _utcnow()),
+            )
+            conn.commit()
+
+    def finish_run(self, run_id: str, status: str, *, lab_id: str | None = None,
+                   tool_call_count: int = 0, total_tokens: int = 0) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE agent_runs SET status = ?, lab_id = ?, completed_at = ?, "
+                "tool_call_count = ?, total_tokens = ? WHERE id = ?",
+                (status, lab_id, _utcnow(), tool_call_count, total_tokens, run_id),
+            )
+            conn.commit()
+
+    def recent(self, limit: int = 10) -> list[dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT id, prompt, status, lab_id, started_at, completed_at, "
+                "tool_call_count, total_tokens FROM agent_runs "
+                "ORDER BY started_at DESC, id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_run_store() -> AgentRunStore:
+    """Construct the production run store. Tests override via
+    ``app.dependency_overrides[get_run_store]``."""
+    return AgentRunStore()
+
+
 class ToolRequest(BaseModel):
     """Generic body: {"args": { ...tool-specific kwargs... }}."""
     args: dict[str, Any] = {}
@@ -498,24 +560,75 @@ class BuildRequest(BaseModel):
 
 
 @router.post("/build")
-def build_lab(body: BuildRequest, repo: tools.Repo = Depends(get_repo)) -> StreamingResponse:
+def build_lab(body: BuildRequest, repo: tools.Repo = Depends(get_repo),
+              run_store: AgentRunStore = Depends(get_run_store)) -> StreamingResponse:
     """Run the lab-builder agent for ``prompt`` and stream its events as SSE.
 
     Each event from ``agent_runner.run_build`` is serialized as one SSE frame
     (``data: {json}\\n\\n``). The runner enforces the CRE-40 cost rails and
-    redacts the API key from any error it surfaces."""
+    redacts the API key from any error it surfaces.
+
+    CRE-47: a ``run_id`` is assigned and an agent_runs row is persisted at start
+    (status='running'). The run_id is emitted to the client via the runner's
+    early ``run_started`` event so the frontend knows what to /cancel. On the
+    terminal event (done/cancelled/error) the row is updated with the final
+    status, lab_id, tool_call_count and total_tokens."""
     kwargs: dict[str, Any] = {}
     if body.model:
         kwargs["model"] = body.model
     if body.max_iterations is not None:
         kwargs["max_iterations"] = body.max_iterations
 
+    run_id = str(uuid.uuid4())
+    run_store.start_run(run_id, body.prompt)
+
     def _event_stream():
+        terminal_recorded = False
         try:
-            for event in agent_runner.run_build(repo, body.prompt, **kwargs):
+            for event in agent_runner.run_build(repo, body.prompt, run_id=run_id, **kwargs):
+                etype = event.get("type")
+                if etype in ("done", "cancelled", "error"):
+                    status = {"done": "completed", "cancelled": "cancelled",
+                              "error": "error"}[etype]
+                    run_store.finish_run(
+                        run_id, status,
+                        lab_id=event.get("lab_id"),
+                        tool_call_count=int(event.get("tool_call_count") or 0),
+                        total_tokens=int(event.get("total_tokens") or 0),
+                    )
+                    terminal_recorded = True
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as exc:  # noqa: BLE001 — never leak; never 500 mid-stream
             safe = agent_runner._redact(str(exc), agent_runner._load_api_key())
-            yield f"data: {json.dumps({'type': 'error', 'message': safe})}\n\n"
+            if not terminal_recorded:
+                run_store.finish_run(run_id, "error")
+                terminal_recorded = True
+            yield f"data: {json.dumps({'type': 'error', 'message': safe, 'run_id': run_id})}\n\n"
+        finally:
+            # Defensive: if the stream ended without any terminal event (e.g.
+            # the generator was closed because the client disconnected), don't
+            # leave the row stuck on 'running'.
+            if not terminal_recorded:
+                run_store.finish_run(run_id, "error")
+            agent_runner.unregister_run(run_id)
 
     return StreamingResponse(_event_stream(), media_type="text/event-stream")
+
+
+@router.post("/build/{run_id}/cancel")
+def cancel_build(run_id: str) -> dict:
+    """Request graceful cancellation of an in-flight build.
+
+    Sets the cancel flag in ``agent_runner``'s module-level registry; the
+    (sync) build generator polls it between iterations/tool-calls and stops,
+    tearing down any partially-built lab and emitting a terminal ``cancelled``
+    event (which updates the agent_runs row). Idempotent: cancelling an unknown
+    or already-finished run simply reports ``cancelled: false``."""
+    accepted = agent_runner.request_cancel(run_id)
+    return tools.ok({"run_id": run_id, "cancelled": accepted})
+
+
+@router.get("/runs")
+def list_runs(run_store: AgentRunStore = Depends(get_run_store)) -> dict:
+    """Return the last 10 runs (most recent first) for the history UI."""
+    return tools.ok({"runs": run_store.recent(limit=10)})

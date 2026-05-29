@@ -97,7 +97,7 @@ async def init_db():
             id INTEGER PRIMARY KEY CHECK (id = 1),
             key TEXT, tier TEXT DEFAULT 'free')""")
         await db.execute("INSERT OR IGNORE INTO license (id,tier) VALUES (1,'free')")
-        
+
         # CRE-68: Traffic Filters (Phase 1: Foundation)
         await db.execute("""CREATE TABLE IF NOT EXISTS traffic_filters (
             id TEXT PRIMARY KEY, lab_id TEXT NOT NULL,
@@ -108,7 +108,7 @@ async def init_db():
             FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE CASCADE)""")
         await db.execute("""CREATE INDEX IF NOT EXISTS idx_filters_lab ON traffic_filters(lab_id)""")
         await db.execute("""CREATE INDEX IF NOT EXISTS idx_filters_enabled ON traffic_filters(lab_id,enabled)""")
-        
+
         # CRE-64: Drawing Tools - Text Objects (rectangles, circles, text annotations)
         await db.execute("""CREATE TABLE IF NOT EXISTS textobjects (
             id TEXT PRIMARY KEY, lab_id TEXT NOT NULL,
@@ -119,7 +119,7 @@ async def init_db():
             created_at TEXT, updated_at TEXT,
             FOREIGN KEY (lab_id) REFERENCES labs(id) ON DELETE CASCADE)""")
         await db.execute("""CREATE INDEX IF NOT EXISTS idx_textobjects_lab ON textobjects(lab_id)""")
-        
+
         # CRE-15: first-run wizard + admin auth state. Single-row settings
         # row, k/v columns. New fields are added as plain ALTER TABLEs below
         # so existing installs don't lose state on upgrade.
@@ -130,6 +130,23 @@ async def init_db():
             telemetry_enabled INTEGER DEFAULT 0,
             updated_at TEXT)""")
         await db.execute("INSERT OR IGNORE INTO settings (id) VALUES (1)")
+
+        # CRE-47 (AILB-7): AI Lab Builder run history. One row per build run,
+        # created at start (status='running') and updated on terminal state
+        # (completed | error | cancelled). Drives the run-history UI and the
+        # cancel/re-run actions.
+        await db.execute("""CREATE TABLE IF NOT EXISTS agent_runs (
+            id TEXT PRIMARY KEY,
+            prompt TEXT,
+            status TEXT,
+            lab_id TEXT,
+            started_at TEXT,
+            completed_at TEXT,
+            tool_call_count INTEGER DEFAULT 0,
+            total_tokens INTEGER DEFAULT 0)""")
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_agent_runs_started ON agent_runs(started_at)"
+        )
         await db.commit()
 
 async def get_db():
