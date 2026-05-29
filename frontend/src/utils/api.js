@@ -1,5 +1,8 @@
 import axios from 'axios'
-const API_BASE = 'http://192.168.174.132:5000/api'
+// Same-origin relative base: prod serves the SPA from the backend (:5000) and
+// dev proxies /api via Vite (:5173 -> :5000). A hard-coded host IP broke the
+// moment the bind defaulted to 127.0.0.1 and on any other host. (CRE-45 follow-up)
+const API_BASE = '/api'
 const api = axios.create({ baseURL: API_BASE })
 export { API_BASE }
 export const getLabs = () => api.get('/labs/')
