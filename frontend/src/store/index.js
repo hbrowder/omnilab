@@ -3,12 +3,17 @@ export const useStore = create((set) => ({
   labs: [], activeLab: null, nodes: [], links: [], templates: [],
   categories: [], systemInfo: null, selectedNode: null,
 
-  // CRE-46 — AI Lab Builder ("Build with AI") panel state.
-  // status: 'idle' | 'building' | 'done' | 'error'
-  aiBuild: { status: 'idle', prompt: '', events: [], error: null, labId: null, summary: null },
+  // CRE-46 / CRE-47 — AI Lab Builder ("Build with AI") panel state.
+  // status: 'idle' | 'building' | 'done' | 'error' | 'cancelled'
+  // runId is captured from the early `run_started` SSE event (CRE-47) so the
+  // Stop button knows which run to POST to /cancel.
+  aiBuild: { status: 'idle', prompt: '', events: [], error: null, labId: null, summary: null, runId: null },
   aiBuildStart: (prompt) => set({
-    aiBuild: { status: 'building', prompt, events: [], error: null, labId: null, summary: null },
+    aiBuild: { status: 'building', prompt, events: [], error: null, labId: null, summary: null, runId: null },
   }),
+  aiBuildSetRunId: (runId) => set((s) => ({
+    aiBuild: { ...s.aiBuild, runId },
+  })),
   aiBuildPushEvent: (event) => set((s) => ({
     aiBuild: { ...s.aiBuild, events: [...s.aiBuild.events, event] },
   })),
@@ -18,8 +23,11 @@ export const useStore = create((set) => ({
   aiBuildError: (error) => set((s) => ({
     aiBuild: { ...s.aiBuild, status: 'error', error },
   })),
+  aiBuildCancelled: () => set((s) => ({
+    aiBuild: { ...s.aiBuild, status: 'cancelled' },
+  })),
   aiBuildReset: () => set({
-    aiBuild: { status: 'idle', prompt: '', events: [], error: null, labId: null, summary: null },
+    aiBuild: { status: 'idle', prompt: '', events: [], error: null, labId: null, summary: null, runId: null },
   }),
   setLabs: (labs) => set({ labs }),
   removeLab: (id) => {

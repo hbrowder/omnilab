@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../../store'
-import { streamAgentBuild } from '../../utils/api'
+import { streamAgentBuild, cancelAgentBuild } from '../../utils/api'
 
 // CRE-46 (AILB-6) — "Build with AI" panel.
 //
@@ -54,17 +54,25 @@ const TOOL_ICON = {
   list_inventory: '📦', lab_state: '🔍', start_node: '▶️', stop_node: '⏹️',
 }
 
-// A single thinking event — collapsible reasoning.
+// A single thinking event — collapsible reasoning. Shows a one-line preview of
+// the reasoning when collapsed so the user gets context without expanding, and
+// defaults to collapsed to keep the log scannable.
 function ThinkingCard({ text }) {
   const [open, setOpen] = useState(false)
+  const preview = (text || '').replace(/\s+/g, ' ').trim()
+  const short = preview.length > 80 ? preview.slice(0, 80) + '…' : preview
   return (
     <div style={{ background: '#0d1117', border: '1px solid #21262d', borderRadius: 8, padding: '8px 12px' }}>
       <button
         onClick={() => setOpen((o) => !o)}
         style={{ background: 'transparent', border: 'none', color: '#8b949e', cursor: 'pointer',
-          fontSize: 12, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+          fontSize: 12, padding: 0, display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left' }}>
         <span>{open ? '▾' : '▸'}</span>
-        <span>💭 Reasoning</span>
+        <span style={{ whiteSpace: 'nowrap' }}>💭 Reasoning</span>
+        {!open && short && (
+          <span style={{ color: '#6e7681', overflow: 'hidden', textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>— {short}</span>
+        )}
       </button>
       {open && (
         <div style={{ marginTop: 6, fontSize: 12, color: '#adbac7', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
@@ -129,13 +137,15 @@ function buildRows(events) {
   return rows
 }
 
-export default function AIBuilderPanel({ open, onClose }) {
+export default function AIBuilderPanel({ open, onClose, autoRunPrompt }) {
   const navigate = useNavigate()
   const {
-    aiBuild, aiBuildStart, aiBuildPushEvent, aiBuildDone, aiBuildError, aiBuildReset,
+    aiBuild, aiBuildStart, aiBuildSetRunId, aiBuildPushEvent, aiBuildDone,
+    aiBuildError, aiBuildCancelled, aiBuildReset,
   } = useStore()
 
   const [input, setInput] = useState(aiBuild.prompt || '')
+  const [cancelling, setCancelling] = useState(false)
   const abortRef = useRef(null)
   const logEndRef = useRef(null)
 
@@ -169,15 +179,21 @@ export default function AIBuilderPanel({ open, onClose }) {
 
     const ctrl = new AbortController()
     abortRef.current = ctrl
-    let sawDone = false
-    let sawError = false
+    setCancelling(false)
+    let sawTerminal = false
     try {
       await streamAgentBuild({ prompt: trimmed }, (ev) => {
-        if (ev.type === 'done') {
-          sawDone = true
+        if (ev.type === 'run_started') {
+          // CRE-47: capture the run_id so Stop can POST /cancel.
+          aiBuildSetRunId(ev.run_id)
+        } else if (ev.type === 'done') {
+          sawTerminal = true
           aiBuildDone(ev.lab_id, ev.summary)
+        } else if (ev.type === 'cancelled') {
+          sawTerminal = true
+          aiBuildCancelled()
         } else if (ev.type === 'error') {
-          sawError = true
+          sawTerminal = true
           aiBuildError(ev.message || 'The builder reported an error.')
         } else {
           // thinking / tool_call / tool_result
@@ -186,21 +202,42 @@ export default function AIBuilderPanel({ open, onClose }) {
       }, ctrl.signal)
       // Stream closed without a terminal event — treat as an error so the
       // user isn't stuck on a spinner.
-      if (!sawDone && !sawError) {
+      if (!sawTerminal) {
         aiBuildError('The build stream ended unexpectedly. Please retry.')
       }
     } catch (e) {
-      if (e?.name === 'AbortError') return // user cancelled; state already reset
+      if (e?.name === 'AbortError') return // stream torn down locally
       aiBuildError(e?.message || 'Could not reach the AI builder. Is the backend running?')
     } finally {
       abortRef.current = null
+      setCancelling(false)
     }
   }
 
-  const cancel = () => {
-    abortRef.current?.abort()
-    abortRef.current = null
-    aiBuildReset()
+  // Graceful cancel: ask the backend to stop the run (it tears down any partial
+  // lab and emits a terminal `cancelled` event we render). We keep the SSE
+  // stream open so that terminal event arrives; if it never does, the stream
+  // close path handles it. Falls back to a local abort if we have no run_id yet.
+  const cancel = async () => {
+    const runId = aiBuild.runId
+    if (!runId) {
+      // No run_id known yet — just tear down locally and reset.
+      abortRef.current?.abort()
+      abortRef.current = null
+      aiBuildReset()
+      return
+    }
+    setCancelling(true)
+    try {
+      await cancelAgentBuild(runId)
+      // Leave the stream open; the backend will emit `cancelled`.
+    } catch {
+      // Backend unreachable — fall back to a hard local stop.
+      abortRef.current?.abort()
+      abortRef.current = null
+      aiBuildCancelled()
+      setCancelling(false)
+    }
   }
 
   const retry = () => {
@@ -208,6 +245,19 @@ export default function AIBuilderPanel({ open, onClose }) {
     aiBuildReset()
     runBuild(prompt)
   }
+
+  // CRE-47 re-run: when opened with an autoRunPrompt (from Run History), fill
+  // the input and kick off the build once per distinct prompt value.
+  const lastAutoRef = useRef(null)
+  useEffect(() => {
+    if (open && autoRunPrompt && autoRunPrompt !== lastAutoRef.current && !building) {
+      lastAutoRef.current = autoRunPrompt
+      setInput(autoRunPrompt)
+      runBuild(autoRunPrompt)
+    }
+    if (!open) lastAutoRef.current = null
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoRunPrompt])
 
   if (!open) return null
 
@@ -261,10 +311,13 @@ export default function AIBuilderPanel({ open, onClose }) {
             ) : (
               <button
                 onClick={cancel}
-                style={{ flex: 1, background: '#21262d', border: '1px solid #30363d',
-                  borderRadius: 8, color: '#e6edf3', cursor: 'pointer', fontSize: 13,
-                  fontWeight: 600, padding: '9px 14px' }}>
-                ⏹ Stop
+                disabled={cancelling}
+                style={{ flex: 1, background: cancelling ? '#5a1d1d' : '#da3633',
+                  border: '1px solid ' + (cancelling ? '#7d2b2b' : '#f85149'),
+                  borderRadius: 8, color: '#fff', cursor: cancelling ? 'default' : 'pointer',
+                  fontSize: 14, fontWeight: 700, padding: '10px 14px',
+                  opacity: cancelling ? 0.8 : 1 }}>
+                {cancelling ? 'Stopping…' : '⏹ Stop'}
               </button>
             )}
           </div>
@@ -319,6 +372,13 @@ export default function AIBuilderPanel({ open, onClose }) {
                 ✓ Lab ready{aiBuild.summary ? ` — ${aiBuild.summary}` : ''}. Opening the canvas…
               </div>
             )}
+
+            {aiBuild.status === 'cancelled' && (
+              <div style={{ background: '#1c1206', border: '1px solid #9e6a0344', borderRadius: 8,
+                padding: '12px 14px', color: '#d29922', fontSize: 13 }}>
+                ⏹ Build cancelled. Any partially-built lab was cleaned up.
+              </div>
+            )}
           </div>
 
           <div ref={logEndRef} />
@@ -341,6 +401,24 @@ export default function AIBuilderPanel({ open, onClose }) {
                 style={{ flex: 1, background: '#238636', border: '1px solid #2ea043', borderRadius: 8,
                   color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '8px 14px' }}>
                 ↻ Retry
+              </button>
+              <button onClick={aiBuildReset}
+                style={{ background: '#21262d', border: '1px solid #30363d', borderRadius: 8,
+                  color: '#adbac7', cursor: 'pointer', fontSize: 13, padding: '8px 14px' }}>
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Cancelled — offer to build again or dismiss */}
+        {aiBuild.status === 'cancelled' && (
+          <div style={{ padding: '12px 18px', borderTop: '1px solid #21262d', background: '#161106' }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={retry}
+                style={{ flex: 1, background: '#238636', border: '1px solid #2ea043', borderRadius: 8,
+                  color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '8px 14px' }}>
+                ↻ Build again
               </button>
               <button onClick={aiBuildReset}
                 style={{ background: '#21262d', border: '1px solid #30363d', borderRadius: 8,

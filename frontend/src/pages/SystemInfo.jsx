@@ -1,9 +1,14 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useStore } from '../store'
 import { getSystemInfo } from '../utils/api'
+import RunHistory from '../components/AIBuilder/RunHistory'
+import AIBuilderPanel from '../components/AIBuilder/AIBuilderPanel'
 export default function SystemInfo() {
   const { systemInfo, setSystemInfo } = useStore()
+  const [aiOpen, setAiOpen] = useState(false)
+  const [rerunPrompt, setRerunPrompt] = useState(null)
   useEffect(() => { getSystemInfo().then(r=>setSystemInfo(r.data)).catch(()=>{}) }, [])
+  const handleRerun = (prompt) => { setRerunPrompt(prompt); setAiOpen(true) }
   const info = systemInfo || {}
   const CHECKS = [
     { label:'KVM / Hardware Virtualization', value:info.kvm_available },
@@ -44,6 +49,14 @@ export default function SystemInfo() {
         ))}
         <div style={{ marginTop:12, fontSize:12, color:'#8b949e' }}>Drop .qcow2 or .vmdk images into the images directory.</div>
       </div>
+
+      {/* CRE-47 — AI Builder run history */}
+      <RunHistory onRerun={handleRerun} />
+      <AIBuilderPanel
+        open={aiOpen}
+        autoRunPrompt={rerunPrompt}
+        onClose={() => { setAiOpen(false); setRerunPrompt(null) }}
+      />
     </div>
   )
 }

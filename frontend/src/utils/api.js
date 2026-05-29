@@ -112,4 +112,12 @@ export async function streamAgentBuild(body, onEvent, signal) {
   drain()
 }
 
+// CRE-47 — AI Lab Builder run history + cancel.
+//
+// cancelAgentBuild signals the backend to gracefully stop an in-flight build
+// (it polls the flag between tool calls). getAgentRuns returns the last 10 runs
+// for the history UI. Both use the shared axios client (not the SSE fetch path).
+export const cancelAgentBuild = (runId) => api.post(`/agent/build/${runId}/cancel`)
+export const getAgentRuns = () => api.get('/agent/runs')
+
 export default api
