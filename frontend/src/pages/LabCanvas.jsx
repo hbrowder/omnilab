@@ -534,6 +534,61 @@ export default function LabCanvas() {
     return all.find(i => !used.has(i)) || all[0]
   }
 
+  // ── CRE-71 P2: shared align/distribute (center-based, snap-aware, persisted) ──
+  const NODE_HALF = 24 // half of the 48px node icon → center = x+24,y+24
+  // Apply a map of {id: {x?,y?}} to selected nodes, optionally snapping, then persist via updateNode
+  const applyNodePositions = (posMap) => {
+    setNodes(prev => prev.map(n => {
+      if(posMap[n.id]===undefined) return n
+      let nx = posMap[n.id].x!==undefined ? posMap[n.id].x : n.x
+      let ny = posMap[n.id].y!==undefined ? posMap[n.id].y : n.y
+      if(gridSnapRef.current){ nx=snap(nx); ny=snap(ny) }
+      return {...n, x:Math.round(nx), y:Math.round(ny)}
+    }))
+    Object.keys(posMap).forEach(id=>{
+      if(String(id).startsWith('tmp-')) return
+      let nx = posMap[id].x, ny = posMap[id].y
+      const cur = nodesRef.current.find(n=>n.id===id)
+      if(nx===undefined) nx = cur?.x
+      if(ny===undefined) ny = cur?.y
+      if(gridSnapRef.current){ nx=snap(nx); ny=snap(ny) }
+      if(nx!=null&&ny!=null) updateNode(id, Math.round(nx), Math.round(ny)).catch(()=>{})
+    })
+  }
+  const selectedNodes = () => nodes.filter(n=>selected instanceof Set && selected.has(n.id))
+  const alignAction = (key) => {
+    const sel = selectedNodes()
+    if(sel.length<2) return
+    const posMap = {}
+    if(key==='left'){ const v=Math.min(...sel.map(n=>n.x)); sel.forEach(n=>posMap[n.id]={x:v}) }
+    else if(key==='right'){ const v=Math.max(...sel.map(n=>n.x)); sel.forEach(n=>posMap[n.id]={x:v}) }
+    else if(key==='top'){ const v=Math.min(...sel.map(n=>n.y)); sel.forEach(n=>posMap[n.id]={y:v}) }
+    else if(key==='bottom'){ const v=Math.max(...sel.map(n=>n.y)); sel.forEach(n=>posMap[n.id]={y:v}) }
+    else if(key==='centerH'){ // align centers on a common X
+      const cx=(Math.min(...sel.map(n=>n.x+NODE_HALF))+Math.max(...sel.map(n=>n.x+NODE_HALF)))/2
+      sel.forEach(n=>posMap[n.id]={x:cx-NODE_HALF})
+    }
+    else if(key==='centerV'){ // align centers on a common Y
+      const cy=(Math.min(...sel.map(n=>n.y+NODE_HALF))+Math.max(...sel.map(n=>n.y+NODE_HALF)))/2
+      sel.forEach(n=>posMap[n.id]={y:cy-NODE_HALF})
+    }
+    else if(key==='distH'){ // evenly space node CENTERS horizontally
+      const s=[...sel].sort((a,b)=>a.x-b.x)
+      if(s.length<3) return
+      const first=s[0].x+NODE_HALF, last=s[s.length-1].x+NODE_HALF
+      const step=(last-first)/(s.length-1)
+      s.forEach((n,i)=>{ posMap[n.id]={x:(first+i*step)-NODE_HALF} })
+    }
+    else if(key==='distV'){ // evenly space node CENTERS vertically
+      const s=[...sel].sort((a,b)=>a.y-b.y)
+      if(s.length<3) return
+      const first=s[0].y+NODE_HALF, last=s[s.length-1].y+NODE_HALF
+      const step=(last-first)/(s.length-1)
+      s.forEach((n,i)=>{ posMap[n.id]={y:(first+i*step)-NODE_HALF} })
+    }
+    applyNodePositions(posMap)
+  }
+
   const menuItems=(kind,item)=>{
     if(kind==='canvas')return[
       {l:'⊕  Add Node',a:()=>{setAddNodeModal(item.coords);setContextMenu(null)}},
@@ -551,12 +606,27 @@ export default function LabCanvas() {
         setContextMenu(null)
       }},
     ]
-    if(kind==='node')return[
+    if(kind==='node'){
+      const multi = selectedRef.current.size>=2
+      const alignItems = multi ? [
+        {l:'⬅  Align Left',a:()=>{alignAction('left');setContextMenu(null)}},
+        {l:'➡  Align Right',a:()=>{alignAction('right');setContextMenu(null)}},
+        {l:'⬆  Align Top',a:()=>{alignAction('top');setContextMenu(null)}},
+        {l:'⬇  Align Bottom',a:()=>{alignAction('bottom');setContextMenu(null)}},
+        {l:'↔  Align Centers (H)',a:()=>{alignAction('centerH');setContextMenu(null)}},
+        {l:'↕  Align Centers (V)',a:()=>{alignAction('centerV');setContextMenu(null)}},
+        ...(selectedRef.current.size>=3 ? [
+          {l:'—  Distribute Horizontally',a:()=>{alignAction('distH');setContextMenu(null)}},
+          {l:'|  Distribute Vertically',a:()=>{alignAction('distV');setContextMenu(null)}},
+        ] : []),
+      ] : []
+      return[
       {l:item.node?.status==='running'?'⬛  Stop Node':'▶  Start Node',a:()=>{setNodes(p=>p.map(n=>n.id===item.node.id?{...n,status:n.status==='running'?'stopped':'running'}:n));setContextMenu(null)}},
       {l:'🖥  Open Console',a:()=>{alert('Console: '+item.node?.name);setContextMenu(null)}},
       {l:'🔗  Add Link from here',a:()=>{connectingRef.current={srcId:item.node.id};setConnecting({srcId:item.node.id});setContextMenu(null)}},
       {l:'✎  Rename',a:()=>{const v=prompt('Name:',item.node?.name);if(v)setNodes(p=>p.map(n=>n.id===item.node.id?{...n,name:v}:n));setContextMenu(null)}},
       {l:'⚙  Configure...',a:()=>{setSelectedNode({id:item.node.id,data:{label:item.node?.name,type:item.node?.type,config:item.node?.config}});setContextMenu(null)}},
+      ...alignItems,
       {l:'⟳  Wipe Node',a:()=>setContextMenu(null)},
       {l: selectedRef.current.size>1 ? '🗑'+'  Delete All Selected ('+selectedRef.current.size+')' : '🗑'+'  Delete Node',col:'#dc2626',a:()=>{
         const toDelete = selectedRef.current.size > 1 ? new Set(selectedRef.current) : new Set([item.node.id])
@@ -566,6 +636,7 @@ export default function LabCanvas() {
         setContextMenu(null)
       }},
     ]
+    }
     if(kind==='net')return[
       {l:'✎  Rename',a:()=>{const v=prompt('Name:',item.net?.name);if(v)setNetworks(p=>p.map(n=>n.id===item.net.id?{...n,name:v}:n));setContextMenu(null)}},
       {l:'🗑  Delete',col:'#dc2626',a:()=>{setNetworks(p=>p.filter(n=>n.id!==item.net.id));setContextMenu(null)}},
@@ -660,62 +731,16 @@ export default function LabCanvas() {
             {alignMenuOpen&&(
               <div style={{position:'absolute',top:28,right:0,background:cb,border:'1px solid '+cbb,borderRadius:8,boxShadow:'0 4px 24px rgba(0,0,0,0.15)',zIndex:999,minWidth:180,overflow:'hidden',fontFamily:'sans-serif'}}>
                 {[
-                  {l:'⬅ Align Left',fn:()=>{
-                    const sel=nodes.filter(n=>selected.has(n.id))
-                    const minX=Math.min(...sel.map(n=>n.x))
-                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,x:minX}:n))
-                    setAlignMenuOpen(false)
-                  }},
-                  {l:'➡ Align Right',fn:()=>{
-                    const sel=nodes.filter(n=>selected.has(n.id))
-                    const maxX=Math.max(...sel.map(n=>n.x))
-                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,x:maxX}:n))
-                    setAlignMenuOpen(false)
-                  }},
-                  {l:'⬆ Align Top',fn:()=>{
-                    const sel=nodes.filter(n=>selected.has(n.id))
-                    const minY=Math.min(...sel.map(n=>n.y))
-                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,y:minY}:n))
-                    setAlignMenuOpen(false)
-                  }},
-                  {l:'⬇ Align Bottom',fn:()=>{
-                    const sel=nodes.filter(n=>selected.has(n.id))
-                    const maxY=Math.max(...sel.map(n=>n.y))
-                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,y:maxY}:n))
-                    setAlignMenuOpen(false)
-                  }},
-                  {l:'↔ Center Horizontal',fn:()=>{
-                    const sel=nodes.filter(n=>selected.has(n.id))
-                    const cx=(Math.min(...sel.map(n=>n.x))+Math.max(...sel.map(n=>n.x)))/2
-                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,x:cx}:n))
-                    setAlignMenuOpen(false)
-                  }},
-                  {l:'↕ Center Vertical',fn:()=>{
-                    const sel=nodes.filter(n=>selected.has(n.id))
-                    const cy=(Math.min(...sel.map(n=>n.y))+Math.max(...sel.map(n=>n.y)))/2
-                    setNodes(p=>p.map(n=>selected.has(n.id)?{...n,y:cy}:n))
-                    setAlignMenuOpen(false)
-                  }},
-                  {l:'— Distribute Horizontally',fn:()=>{
-                    const sel=[...nodes.filter(n=>selected.has(n.id))].sort((a,b)=>a.x-b.x)
-                    if(sel.length<3){setAlignMenuOpen(false);return}
-                    const span=sel[sel.length-1].x-sel[0].x
-                    const step=span/(sel.length-1)
-                    const posMap={}
-                    sel.forEach((n,i)=>{posMap[n.id]=sel[0].x+i*step})
-                    setNodes(p=>p.map(n=>posMap[n.id]!==undefined?{...n,x:posMap[n.id]}:n))
-                    setAlignMenuOpen(false)
-                  }},
-                  {l:'| Distribute Vertically',fn:()=>{
-                    const sel=[...nodes.filter(n=>selected.has(n.id))].sort((a,b)=>a.y-b.y)
-                    if(sel.length<3){setAlignMenuOpen(false);return}
-                    const span=sel[sel.length-1].y-sel[0].y
-                    const step=span/(sel.length-1)
-                    const posMap={}
-                    sel.forEach((n,i)=>{posMap[n.id]=sel[0].y+i*step})
-                    setNodes(p=>p.map(n=>posMap[n.id]!==undefined?{...n,y:posMap[n.id]}:n))
-                    setAlignMenuOpen(false)
-                  }},
+                  {l:'⬅ Align Left',fn:()=>{alignAction('left');setAlignMenuOpen(false)}},
+                  {l:'➡ Align Right',fn:()=>{alignAction('right');setAlignMenuOpen(false)}},
+                  {l:'⬆ Align Top',fn:()=>{alignAction('top');setAlignMenuOpen(false)}},
+                  {l:'⬇ Align Bottom',fn:()=>{alignAction('bottom');setAlignMenuOpen(false)}},
+                  {l:'↔ Center Horizontal',fn:()=>{alignAction('centerH');setAlignMenuOpen(false)}},
+                  {l:'↕ Center Vertical',fn:()=>{alignAction('centerV');setAlignMenuOpen(false)}},
+                  ...(selected.size>=3 ? [
+                    {l:'— Distribute Horizontally',fn:()=>{alignAction('distH');setAlignMenuOpen(false)}},
+                    {l:'| Distribute Vertically',fn:()=>{alignAction('distV');setAlignMenuOpen(false)}},
+                  ] : []),
                 ].map(item=>(
                   <div key={item.l} onClick={item.fn} style={{padding:'8px 14px',fontSize:12,color:tc,cursor:'pointer',borderBottom:'1px solid '+bc}}
                     onMouseEnter={e=>e.currentTarget.style.background=darkMode?'#334155':'#f8fafc'}
