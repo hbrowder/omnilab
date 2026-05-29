@@ -6,6 +6,7 @@ from pathlib import Path
 
 import httpx
 import uvicorn
+from api.agent import router as agent_router
 from api.auth import router as auth_router
 from api.backup import router as backup_router
 from api.billing import router as billing_router
@@ -107,6 +108,7 @@ app.include_router(console_router,   prefix="/api/console")
 app.include_router(traffic_websocket_router, prefix="/api")  # CRE-68 Phase 3: WebSocket for traffic events
 app.include_router(traffic_filters_router)  # CRE-68: Traffic Filters (uses /api/labs prefix internally)
 app.include_router(textobjects_router)      # CRE-64: Drawing Tools (uses /api/labs prefix internally)
+app.include_router(agent_router)            # CRE-42: AI Lab Builder tool surface (router sets its own /api/agent prefix)
 # CRE-39: docker-node web-UI reverse proxy. Routes are
 #   /labs/{lab_id}/nodes/{node_id}/web/*       (HTTP)
 #   /labs/{lab_id}/nodes/{node_id}/web-ws/*    (WebSocket)
