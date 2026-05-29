@@ -7,6 +7,7 @@ import NodePanel from '../components/NodePanel'
 import DrawingToolbar from '../components/DrawingToolbar'
 import TrafficFilterPanel from '../components/TrafficFilterPanel'
 import LinkAnimationEngine from '../components/LinkAnimationEngine'
+import CanvasNodeLibrary from '../components/CanvasNodeLibrary'
 import { useTrafficWebSocket } from '../hooks/useTrafficWebSocket'
 
 const IFACES = ['GigabitEthernet0/0','GigabitEthernet0/1','GigabitEthernet0/2','GigabitEthernet0/3','FastEthernet0/0','FastEthernet0/1','eth0','eth1','eth2','eth3','mgmt0','Loopback0']
@@ -207,6 +208,9 @@ export default function LabCanvas() {
 
   // CRE-71: Align modal
   const [alignMenuOpen, setAlignMenuOpen] = useState(false)
+
+  // CRE-71 P3 (7): Persistent node-library sidebar (replaces modal for placement)
+  const [libraryOpen, setLibraryOpen] = useState(true)
 
   // CRE-68 Phase 3: WebSocket for real-time traffic animation
   const { connected: wsConnected, events: trafficEvents, packetCounts, activeFilters: wsActiveFilters, lastError: wsLastError } = useTrafficWebSocket(labId)
@@ -556,6 +560,32 @@ export default function LabCanvas() {
     setAddNodeModal(null)
   }
 
+  // CRE-71 P3 (7): Create a network object at a given canvas coordinate
+  const addNetworkAt=(netKey,coords)=>{
+    const def=NET_DEFS[netKey]||NET_DEFS.bridge
+    const name=prompt('Network name:',def.label)
+    if(name){
+      setNetworks(p=>[...p,{id:'net-'+Date.now(),name,type:netKey,x:Math.round(coords.x),y:Math.round(coords.y)}])
+    }
+  }
+
+  // CRE-71 P3 (7): Drag-and-drop from the node-library sidebar onto the canvas
+  const onCanvasDragOver=(e)=>{
+    if(e.dataTransfer.types.includes('application/x-canvas-item')){
+      e.preventDefault(); e.dataTransfer.dropEffect='copy'
+    }
+  }
+  const onCanvasDrop=(e)=>{
+    const raw=e.dataTransfer.getData('application/x-canvas-item')
+    if(!raw) return
+    e.preventDefault()
+    let payload; try{ payload=JSON.parse(raw) }catch{ return }
+    const coords=toCanvas(e.clientX,e.clientY)
+    const snapped={x:gridSnapRef.current?snap(coords.x):coords.x, y:gridSnapRef.current?snap(coords.y):coords.y}
+    if(payload.kind==='net') addNetworkAt(payload.key,snapped)
+    else addNodeToCanvas(payload.key,snapped)
+  }
+
   const confirmAddNodes=async()=>{
     if(!pendingAdd)return
     const {vendorType,coords}=pendingAdd
@@ -835,6 +865,7 @@ export default function LabCanvas() {
       <div style={{display:'flex',flex:1,overflow:'hidden'}}>
         <div style={{width:40,background:darkMode?'#0f172a':'#f1f5f9',borderRight:'1px solid '+bc,display:'flex',flexDirection:'column',alignItems:'center',paddingTop:8,gap:4,flexShrink:0}}>
           {[
+            {ic:'☰',tip:'Toggle Node Library',fn:()=>setLibraryOpen(o=>!o)},
             {ic:'⊕',tip:'Add Node',fn:()=>setAddNodeModal({x:300,y:200})},
             {ic:'⊞',tip:'Add Network',fn:()=>setAddNetModal({x:300,y:200})},
             {ic:'T',tip:'Add Text',fn:()=>{
@@ -859,7 +890,17 @@ export default function LabCanvas() {
           ))}
         </div>
 
-        <div style={{flex:1,position:'relative',overflow:'hidden'}}>
+        {/* CRE-71 P3 (7): Persistent EVE-NG-style node-library sidebar */}
+        <CanvasNodeLibrary
+          darkMode={darkMode}
+          netDefs={NET_DEFS}
+          open={libraryOpen}
+          onToggle={()=>setLibraryOpen(o=>!o)}
+          onPickNode={(vt)=>addNodeToCanvas(vt,{x:300,y:200})}
+          onPickNet={(nk)=>addNetworkAt(nk,{x:300,y:200})}
+        />
+
+        <div style={{flex:1,position:'relative',overflow:'hidden'}} onDragOver={onCanvasDragOver} onDrop={onCanvasDrop}>
           <svg ref={svgRef} width="100%" height="100%"
             style={{display:'block',cursor:connecting?'crosshair':draggingRef.current?'grabbing':'default'}}
             onMouseDown={onSvgMouseDown}
