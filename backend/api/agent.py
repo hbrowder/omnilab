@@ -64,6 +64,19 @@ def _default_ifaces_for(image: str) -> list[str]:
     return list(_DEFAULT_IFACES[_derive_kind(image)])
 
 
+# Curated images the AI Lab Builder agent can always use, even on a clean DB
+# where no template happens to reference them. Without this, list_inventory only
+# surfaces images pulled in from the templates table + built-in TEMPLATES, so
+# headline routing scenarios (OSPF/BGP with FRR) would be rejected with
+# INVALID_IMAGE on a fresh install. Keyword classification in _derive_kind
+# already maps "frr" -> router; ram_mb is a best-effort per-node footprint.
+# (CRE-48)
+_AGENT_CATALOG: list[dict] = [
+    {"image": "frrouting/frr:latest", "ram_mb": 256},
+    {"image": "rancher/k3s:latest", "ram_mb": 512},
+]
+
+
 # ============================================================================
 # Production Repo — short-lived synchronous sqlite3 connections
 # ============================================================================
@@ -140,6 +153,11 @@ class SqliteRepo(tools.Repo):
                         _add(node.get("image"))
             except Exception:
                 pass
+
+            # UNION in the curated agent catalog so headline AI-builder scenarios
+            # (e.g. OSPF/BGP with FRR routers) build on a clean install (CRE-48).
+            for entry in _AGENT_CATALOG:
+                _add(entry["image"], entry.get("ram_mb"))
 
             running = conn.execute(
                 "SELECT COUNT(*) AS n FROM nodes WHERE status = 'running'"

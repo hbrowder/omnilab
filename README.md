@@ -45,6 +45,33 @@ WebSocket, and the canvas renders animated colored particles along each link.
 Tracked under [CRE-68](https://linear.app/harold-browder/issue/CRE-68). Ship
 reports for each milestone live in `docs/CRE-68_PHASE3_MILESTONE*.md`.
 
+### AI Lab Builder (OmniLab v1.1)
+
+Describe the lab you want in plain English and watch the agent build it. Type a
+prompt — *"OSPF area 0/1 with 4 FRR routers"* — and an LLM tool-calling loop
+calls the same topology + lifecycle tools the UI uses (`create_lab`,
+`create_node`, `link_nodes`, `push_config`, `start_node`) to stand the lab up,
+streaming each step to a live activity log.
+
+![AI Lab Builder panel](docs/demo-assets/ai-lab-builder.png)
+
+- **Natural-language → working lab** — prompt in, deployed topology out, then
+  drops you on the canvas with the new lab loaded
+- **Streaming activity log** — every `tool_call`/`tool_result` renders live over
+  SSE, with collapsible agent "thinking" and a red **Stop** button that cancels
+  gracefully between tool calls (and tears down the half-built lab)
+- **Bring-your-own key** — OpenRouter by default, plus Anthropic / OpenAI /
+  custom OpenAI-compatible endpoints; keys are stored encrypted and never echoed
+- **Cost rails** — hard per-call `max_tokens`, capped iterations + tool calls,
+  and auto-cleanup so a runaway build can't orphan containers or burn budget
+- **Run history** — every build is persisted (prompt, status, lab, tokens) with
+  re-run / view-lab actions
+
+Six curated demo scenarios (OSPF, eBGP, 3-tier campus, Kali+DVWA pentest, k3s
+cluster, Wazuh SOC) live in `tests/agent_scenarios.json`; the recordable demo
+script is in [`docs/demo-script.md`](docs/demo-script.md). Tracked under
+[CRE-41–CRE-48](https://linear.app/harold-browder/project/omnilab-v11-ai-lab-builder).
+
 ### Other capabilities
 
 - KVM/QEMU + Docker-backed lab nodes with one-click deploy from templates
