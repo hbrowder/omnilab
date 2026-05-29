@@ -128,10 +128,14 @@ export default function LabCanvas() {
   const [drawStrokeColor, setDrawStrokeColor] = useState('rgba(88,166,255,1)')
   const [drawingShape, setDrawingShape] = useState(null) // {type, startX, startY}
 
-  // CRE-71: Snap-to-grid
+  // CRE-71: Snap-to-grid (configurable grid size)
   const [gridSnapEnabled, setGridSnapEnabled] = useState(false)
-  const GRID_SIZE = 20
-  const snap = (v) => Math.round(v / GRID_SIZE) * GRID_SIZE
+  const GRID_SIZES = [10, 20, 40]
+  const [gridSize, setGridSize] = useState(20)
+  const gridSnapRef = useRef(false)
+  const gridSizeRef = useRef(20)
+  // snap() reads refs so it stays correct inside the window event handlers (mounted with [] deps)
+  const snap = (v) => Math.round(v / gridSizeRef.current) * gridSizeRef.current
 
   // CRE-71: Align modal
   const [alignMenuOpen, setAlignMenuOpen] = useState(false)
@@ -147,6 +151,8 @@ export default function LabCanvas() {
   useEffect(()=>{ nodesRef.current=nodes },[nodes])
   useEffect(()=>{ networksRef.current=networks },[networks])
   useEffect(()=>{ connectingRef.current=connecting },[connecting])
+  useEffect(()=>{ gridSnapRef.current=gridSnapEnabled },[gridSnapEnabled])
+  useEffect(()=>{ gridSizeRef.current=gridSize },[gridSize])
 
   const bg=darkMode?'#0f172a':'#ffffff'
   const gridSm=darkMode?'#1e293b':'#f0f0f0'
@@ -241,8 +247,8 @@ export default function LabCanvas() {
         if(d.kind==='resize'){
           const o=d.origin // {x,y,width,height}
           let nx=o.x, ny=o.y, nw=o.width, nh=o.height
-          const cx2 = gridSnapEnabled ? snap(c.x) : c.x
-          const cy2 = gridSnapEnabled ? snap(c.y) : c.y
+          const cx2 = gridSnapRef.current ? snap(c.x) : c.x
+          const cy2 = gridSnapRef.current ? snap(c.y) : c.y
           // handle codes: combination of n/s and w/e
           if(d.handle.includes('e')) nw = Math.max(20, cx2 - o.x)
           if(d.handle.includes('s')) nh = Math.max(20, cy2 - o.y)
@@ -254,8 +260,8 @@ export default function LabCanvas() {
         const nx=c.x-dragOffsetRef.current.x
         const ny=c.y-dragOffsetRef.current.y
         // CRE-71: live snap-to-grid feedback while dragging
-        const fx = gridSnapEnabled ? snap(nx) : nx
-        const fy = gridSnapEnabled ? snap(ny) : ny
+        const fx = gridSnapRef.current ? snap(nx) : nx
+        const fy = gridSnapRef.current ? snap(ny) : ny
         if(d.kind==='node'){
           nodesRef.current=nodesRef.current.map(n=>n.id===d.id?{...n,x:fx,y:fy}:n)
           setNodes([...nodesRef.current])
@@ -333,7 +339,7 @@ export default function LabCanvas() {
         }
         // CRE-71: Snap-to-grid on node drag release + persist position via updateNode
         if(dr.kind === 'node'){
-          if(gridSnapEnabled){
+          if(gridSnapRef.current){
             nodesRef.current = nodesRef.current.map(n =>
               n.id === dr.id ? {...n, x: snap(n.x), y: snap(n.y)} : n
             )
@@ -627,12 +633,23 @@ export default function LabCanvas() {
         </button>
         <div style={{flex:1}}/>
         <span style={{fontSize:11,color:sc,background:darkMode?'#0f172a':'#f1f5f9',padding:'2px 8px',borderRadius:4,border:'1px solid '+bc}}>{runCount}/{nodes.length} running</span>
-        {/* CRE-71: Snap-to-grid toggle */}
-        <button onClick={()=>setGridSnapEnabled(g=>!g)}
-          title="Snap to grid (20px)"
-          style={{fontSize:11,padding:'3px 10px',border:'1px solid '+(gridSnapEnabled?'#3b82f6':bc),borderRadius:4,background:gridSnapEnabled?(darkMode?'#1e3a5f':'#eff6ff'):'transparent',color:gridSnapEnabled?'#3b82f6':sc,cursor:'pointer'}}>
-          ⊞ {gridSnapEnabled?'Snap ON':'Snap OFF'}
-        </button>
+        {/* CRE-71: Snap-to-grid toggle + configurable grid size */}
+        <div style={{display:'flex',alignItems:'center',border:'1px solid '+(gridSnapEnabled?'#3b82f6':bc),borderRadius:4,overflow:'hidden'}}>
+          <button onClick={()=>setGridSnapEnabled(g=>!g)}
+            title={`Snap to grid (${gridSize}px)`}
+            style={{fontSize:11,padding:'3px 10px',border:'none',background:gridSnapEnabled?(darkMode?'#1e3a5f':'#eff6ff'):'transparent',color:gridSnapEnabled?'#3b82f6':sc,cursor:'pointer'}}>
+            ⊞ {gridSnapEnabled?'Snap ON':'Snap OFF'}
+          </button>
+          <button onClick={()=>{
+              const i=GRID_SIZES.indexOf(gridSize)
+              setGridSize(GRID_SIZES[(i+1)%GRID_SIZES.length])
+              if(!gridSnapEnabled) setGridSnapEnabled(true)
+            }}
+            title="Cycle grid size (10 / 20 / 40 px)"
+            style={{fontSize:11,padding:'3px 8px',border:'none',borderLeft:'1px solid '+(gridSnapEnabled?'#3b82f6':bc),background:'transparent',color:gridSnapEnabled?'#3b82f6':sc,cursor:'pointer',fontVariantNumeric:'tabular-nums'}}>
+            {gridSize}px
+          </button>
+        </div>
         {/* CRE-71: Align/distribute (only when 2+ nodes selected) */}
         {selected.size>=2&&(
           <div style={{position:'relative'}}>
@@ -759,8 +776,14 @@ export default function LabCanvas() {
                 <rect width="100" height="100" fill="url(#sg)"/>
                 <path d="M100 0L0 0 0 100" fill="none" stroke={gridLg} strokeWidth="0.5"/>
               </pattern>
+              {/* CRE-71: snap-grid overlay aligned to actual snap positions (canvas-space via pan/zoom) */}
+              <pattern id="snapgrid" width={gridSize*zoom} height={gridSize*zoom} patternUnits="userSpaceOnUse"
+                patternTransform={`translate(${pan.x},${pan.y})`}>
+                <circle cx={0.5} cy={0.5} r={Math.max(0.6,0.9*zoom)} fill={darkMode?'#3b82f6':'#60a5fa'} opacity={0.5}/>
+              </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#lg)" data-canvas="1"/>
+            {gridSnapEnabled&&<rect width="100%" height="100%" fill="url(#snapgrid)" data-canvas="1" pointerEvents="none"/>}
 
             <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
 
