@@ -98,6 +98,7 @@ export default function LabCanvas() {
   const [loading, setLoading] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
   const [hideLabels, setHideLabels] = useState(false)
+  const [showIfaceLabels, setShowIfaceLabels] = useState(true) // CRE-71: independent interface-label toggle
   const [showMinimap, setShowMinimap] = useState(true)
   const [showTrafficFilters, setShowTrafficFilters] = useState(false) // CRE-68
   const [selBox, setSelBox] = useState(null)
@@ -694,6 +695,11 @@ export default function LabCanvas() {
         )}
         <button onClick={()=>setDarkMode(d=>!d)} style={{fontSize:11,padding:'3px 10px',border:'1px solid '+bc,borderRadius:4,background:'transparent',color:sc,cursor:'pointer'}}>{darkMode?'☀':'🌙'}</button>
         <button onClick={()=>setHideLabels(h=>!h)} style={{fontSize:11,padding:'3px 10px',border:'1px solid '+bc,borderRadius:4,background:'transparent',color:sc,cursor:'pointer'}}>{hideLabels?'Show Labels':'Hide Labels'}</button>
+        {/* CRE-71: Independent interface/port label toggle */}
+        <button onClick={()=>setShowIfaceLabels(s=>!s)} title="Toggle interface/port labels on links"
+          style={{fontSize:11,padding:'3px 10px',border:'1px solid '+(showIfaceLabels?'#2563eb':bc),borderRadius:4,background:showIfaceLabels?(darkMode?'#1e3a5f':'#eff6ff'):'transparent',color:showIfaceLabels?'#2563eb':sc,cursor:'pointer'}}>
+          {showIfaceLabels?'Ports ON':'Ports OFF'}
+        </button>
         <button onClick={()=>navigate('/')} style={{fontSize:11,padding:'3px 10px',border:'1px solid '+bc,borderRadius:4,background:'transparent',color:sc,cursor:'pointer'}}>✕ Close</button>
       </div>
 
@@ -844,19 +850,23 @@ export default function LabCanvas() {
                     <path d={pathD} stroke={linkColor} strokeWidth={linkWidth} strokeDasharray={dash} fill="none"/>
                     <path d={pathD} stroke="transparent" strokeWidth="14" fill="none"/>
                     {!hideLabels&&<>
-                      {/* CRE-65-B: Source interface label (always shown) */}
-                      <text x={sxe} y={sye} textAnchor="middle" fontSize="8" fill={darkMode?'#60a5fa':'#2563eb'} fontFamily="monospace"
+                      {/* CRE-71/CRE-65-B: src/dst interface (port) labels — independent toggle */}
+                      {showIfaceLabels && link.srcIface && (
+                      <text x={sxe} y={sye-3} textAnchor="middle" fontSize="8" fill={darkMode?'#60a5fa':'#2563eb'} fontFamily="monospace"
                         transform={`rotate(${rot},${sxe},${sye})`}>
                         {link.srcIface.replace('GigabitEthernet','Gi').replace('FastEthernet','Fa')}
                       </text>
-                      
+                      )}
+
                       {/* CRE-65-B: Destination interface label (node-to-node OR node-to-network) */}
                       {dst ? (
                         // Node-to-node: show destination node interface
-                        <text x={dxe} y={dye} textAnchor="middle" fontSize="8" fill={darkMode?'#60a5fa':'#2563eb'} fontFamily="monospace"
+                        showIfaceLabels && link.dstIface && (
+                        <text x={dxe} y={dye-3} textAnchor="middle" fontSize="8" fill={darkMode?'#60a5fa':'#2563eb'} fontFamily="monospace"
                           transform={`rotate(${rot},${dxe},${dye})`}>
                           {link.dstIface.replace('GigabitEthernet','Gi').replace('FastEthernet','Fa')}
                         </text>
+                        )
                       ) : (
                         // Node-to-network: show network name at connection point
                         <text x={dxe} y={dye} textAnchor="middle" fontSize="9" fill={darkMode?'#a78bfa':'#7c3aed'} fontFamily="sans-serif" fontWeight="600"
@@ -864,7 +874,7 @@ export default function LabCanvas() {
                           {net.name}
                         </text>
                       )}
-                      
+
                       {/* Link label (custom text) */}
                       {link.label&&(
                         <text x={labelX} y={labelY-8} textAnchor="middle" fontSize="10" fill={linkColor} fontWeight="600" fontFamily="sans-serif"
