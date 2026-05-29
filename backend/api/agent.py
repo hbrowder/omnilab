@@ -17,13 +17,16 @@ can override it via ``app.dependency_overrides[get_repo]``.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import uuid
 from typing import Any
 
 from core.config import settings
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from services import agent_runner
 from services import agent_tools as tools
 from services.agent_tools import AILBError, err
 
@@ -482,3 +485,37 @@ def call_tool(name: str, body: ToolRequest, repo: tools.Repo = Depends(get_repo)
 def list_tools() -> dict:
     """Discovery endpoint — names the agent loop (CRE-44) can introspect."""
     return tools.ok({"tools": sorted(tools.TOOLS)})
+
+
+# ============================================================================
+# CRE-44 — the LLM tool-calling loop, streamed to the client as SSE.
+# ============================================================================
+
+class BuildRequest(BaseModel):
+    prompt: str
+    model: str | None = None
+    max_iterations: int | None = None
+
+
+@router.post("/build")
+def build_lab(body: BuildRequest, repo: tools.Repo = Depends(get_repo)) -> StreamingResponse:
+    """Run the lab-builder agent for ``prompt`` and stream its events as SSE.
+
+    Each event from ``agent_runner.run_build`` is serialized as one SSE frame
+    (``data: {json}\\n\\n``). The runner enforces the CRE-40 cost rails and
+    redacts the API key from any error it surfaces."""
+    kwargs: dict[str, Any] = {}
+    if body.model:
+        kwargs["model"] = body.model
+    if body.max_iterations is not None:
+        kwargs["max_iterations"] = body.max_iterations
+
+    def _event_stream():
+        try:
+            for event in agent_runner.run_build(repo, body.prompt, **kwargs):
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as exc:  # noqa: BLE001 — never leak; never 500 mid-stream
+            safe = agent_runner._redact(str(exc), agent_runner._load_api_key())
+            yield f"data: {json.dumps({'type': 'error', 'message': safe})}\n\n"
+
+    return StreamingResponse(_event_stream(), media_type="text/event-stream")
