@@ -17,6 +17,74 @@ const NET_DEFS = {
   lag:      { label:'LAG/Bond',  color:'#be185d' },
 }
 
+// ── CRE-71 P3 (9): Shared link path generation ────────────────────────────
+// Single source of truth for link geometry so the visible <path> and the
+// LinkAnimationEngine particle path never desync. Supports Straight / Bezier /
+// Flowchart, plus 'Orthogonal' obstacle-avoiding routing.
+//
+// obstacles: array of {x,y,w,h} bounding boxes (node icons) to route around.
+const NODE_BOX = 48 // node icon footprint (matches NodeIcon size=48)
+const ROUTE_PAD = 14 // clearance kept around obstacle boxes
+
+const segHitsBox = (ax, ay, bx, by, box) => {
+  // axis-aligned segment vs rect overlap test (segments here are H or V)
+  const minX = Math.min(ax, bx), maxX = Math.max(ax, bx)
+  const minY = Math.min(ay, by), maxY = Math.max(ay, by)
+  return maxX >= box.x && minX <= box.x + box.w && maxY >= box.y && minY <= box.y + box.h
+}
+
+const orthPathClear = (pts, obstacles) => {
+  for(let i=0;i<pts.length-1;i++){
+    for(const b of obstacles){
+      if(segHitsBox(pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y, b)) return false
+    }
+  }
+  return true
+}
+
+// Returns an array of waypoints for an orthogonal route from (sx,sy)->(dx,dy)
+// that tries to avoid the given obstacle boxes. Falls back to a simple
+// mid-step elbow if no clean route is found.
+const orthogonalRoute = (sx, sy, dx, dy, obstacles) => {
+  const candidates = [
+    // simple two-elbow routes (HV and VH)
+    [{x:sx,y:sy},{x:dx,y:sy},{x:dx,y:dy}],
+    [{x:sx,y:sy},{x:sx,y:dy},{x:dx,y:dy}],
+    // mid-split routes
+    [{x:sx,y:sy},{x:(sx+dx)/2,y:sy},{x:(sx+dx)/2,y:dy},{x:dx,y:dy}],
+    [{x:sx,y:sy},{x:sx,y:(sy+dy)/2},{x:dx,y:(sy+dy)/2},{x:dx,y:dy}],
+  ]
+  for(const c of candidates){
+    if(orthPathClear(c, obstacles)) return c
+  }
+  // Detour: route around the bounding region with extra clearance.
+  const allTop = Math.min(...obstacles.map(b=>b.y), sy, dy) - ROUTE_PAD
+  const allBot = Math.max(...obstacles.map(b=>b.y+b.h), sy, dy) + ROUTE_PAD
+  const overY = (Math.abs(sy-allTop) <= Math.abs(sy-allBot)) ? allTop : allBot
+  const detour = [{x:sx,y:sy},{x:sx,y:overY},{x:dx,y:overY},{x:dx,y:dy}]
+  if(orthPathClear(detour, obstacles)) return detour
+  // last resort: plain HV elbow
+  return [{x:sx,y:sy},{x:(sx+dx)/2,y:sy},{x:(sx+dx)/2,y:dy},{x:dx,y:dy}]
+}
+
+const ptsToPath = (pts) => pts.map((p,i)=>`${i===0?'M':'L'}${p.x},${p.y}`).join(' ')
+
+export const buildLinkPath = (sx, sy, dx, dy, linkstyle, obstacles=[]) => {
+  if(linkstyle==='Bezier'){
+    const midX=(sx+dx)/2, midY=(sy+dy)/2
+    const perpX=-(dy-sy)/4, perpY=(dx-sx)/4
+    return `M${sx},${sy} Q${midX+perpX},${midY+perpY} ${dx},${dy}`
+  }
+  if(linkstyle==='Flowchart'){
+    const midX=(sx+dx)/2
+    return `M${sx},${sy} L${midX},${sy} L${midX},${dy} L${dx},${dy}`
+  }
+  if(linkstyle==='Orthogonal'){
+    return ptsToPath(orthogonalRoute(sx, sy, dx, dy, obstacles))
+  }
+  return `M${sx},${sy} L${dx},${dy}` // Straight (default)
+}
+
 const guessType=(n)=>{
   const img=(n.image||'').toLowerCase()
   const name=(n.name||'').toLowerCase()
@@ -182,7 +250,8 @@ export default function LabCanvas() {
         linkstyle:l.linkstyle||'Straight',
         label:l.label||'',
         labelpos:l.labelpos!=null?l.labelpos:0.5,
-        width:l.width||1.5
+        width:l.width||1.5,
+        arrow:l.arrow||null
       })))
       // CRE-64: Load textobjects from API
       setTexts(tor.data.map(obj=>({
@@ -652,12 +721,15 @@ export default function LabCanvas() {
         if(v!==null) setLinks(p=>p.map(l=>l.id===item.link.id?{...l,color:v}:l))
         setContextMenu(null)
       }},
-      {l:'── Solid',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'Solid'}:l));setContextMenu(null)}},
-      {l:'- - Dashed',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'Dashed'}:l));setContextMenu(null)}},
-      {l:'··· Dotted',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'dotted'}:l));setContextMenu(null)}},
-      {l:'📐 Straight',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,linkstyle:'Straight'}:l));setContextMenu(null)}},
-      {l:'〜 Bezier',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,linkstyle:'Bezier'}:l));setContextMenu(null)}},
-      {l:'⌐ Flowchart',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,linkstyle:'Flowchart'}:l));setContextMenu(null)}},
+      {l:(item.link.style!=='Dashed'&&item.link.style!=='dotted'?'✓ ':'   ')+'── Solid',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'Solid'}:l));setContextMenu(null)}},
+      {l:(item.link.style==='Dashed'?'✓ ':'   ')+'- - Dashed',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'Dashed'}:l));setContextMenu(null)}},
+      {l:(item.link.style==='dotted'?'✓ ':'   ')+'··· Dotted',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,style:'dotted'}:l));setContextMenu(null)}},
+      {l:(item.link.linkstyle==='Straight'?'✓ ':'   ')+'📐 Straight',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,linkstyle:'Straight'}:l));setContextMenu(null)}},
+      {l:(item.link.linkstyle==='Bezier'?'✓ ':'   ')+'〜 Bezier',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,linkstyle:'Bezier'}:l));setContextMenu(null)}},
+      {l:(item.link.linkstyle==='Flowchart'?'✓ ':'   ')+'⌐ Flowchart',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,linkstyle:'Flowchart'}:l));setContextMenu(null)}},
+      {l:(item.link.linkstyle==='Orthogonal'?'✓ ':'   ')+'⌑ Orthogonal (auto-avoid)',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,linkstyle:'Orthogonal'}:l));setContextMenu(null)}},
+      {l:(link=>link.arrow==='end'?'✓ ':'   ')(item.link)+'➜ Arrow (end)',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,arrow:l.arrow==='end'?null:'end'}:l));setContextMenu(null)}},
+      {l:(link=>link.arrow==='both'?'✓ ':'   ')(item.link)+'⟷ Arrows (both)',a:()=>{setLinks(p=>p.map(l=>l.id===item.link.id?{...l,arrow:l.arrow==='both'?null:'both'}:l));setContextMenu(null)}},
       {l:'🗑  Delete Link',col:'#dc2626',a:()=>{setLinks(p=>p.filter(l=>l.id!==item.link.id));setContextMenu(null)}},
     ]
     if(kind==='text'){
@@ -806,6 +878,13 @@ export default function LabCanvas() {
                 patternTransform={`translate(${pan.x},${pan.y})`}>
                 <circle cx={0.5} cy={0.5} r={Math.max(0.6,0.9*zoom)} fill={darkMode?'#3b82f6':'#60a5fa'} opacity={0.5}/>
               </pattern>
+              {/* CRE-71 P3 (8): Link arrowhead markers (directional connection styling) */}
+              <marker id="arrow-end" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+                <path d="M0,0 L8,3 L0,6 Z" fill={darkMode?'#94a3b8':'#64748b'}/>
+              </marker>
+              <marker id="arrow-start" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+                <path d="M8,0 L0,3 L8,6 Z" fill={darkMode?'#94a3b8':'#64748b'}/>
+              </marker>
             </defs>
             <rect width="100%" height="100%" fill="url(#lg)" data-canvas="1"/>
             {gridSnapEnabled&&<rect width="100%" height="100%" fill="url(#snapgrid)" data-canvas="1" pointerEvents="none"/>}
@@ -889,24 +968,20 @@ export default function LabCanvas() {
                 if(!src||!dstObj)return null
                 const sx=src.x+24,sy=src.y+24
                 const dx=dstObj.x+(net?30:24),dy=dstObj.y+(net?25:24)
-                
+
                 // CRE-66: Link styling
                 const linkColor = link.color || (darkMode?'#475569':'#9ca3af')
                 const linkWidth = link.width || 1.5
-                const dash = link.style==='Dashed'?'8,4':undefined
-                
-                // Path generation based on linkstyle
-                let pathD = `M${sx},${sy} L${dx},${dy}` // Default: Straight
-                if(link.linkstyle==='Bezier'){
-                  const midX=(sx+dx)/2, midY=(sy+dy)/2
-                  const perpX=-(dy-sy)/4, perpY=(dx-sx)/4
-                  const cp1x=midX+perpX, cp1y=midY+perpY
-                  pathD=`M${sx},${sy} Q${cp1x},${cp1y} ${dx},${dy}`
-                }else if(link.linkstyle==='Flowchart'){
-                  const midX=(sx+dx)/2
-                  pathD=`M${sx},${sy} L${midX},${sy} L${midX},${dy} L${dx},${dy}`
-                }
-                
+                const dash = link.style==='Dashed'?'8,4':(link.style==='dotted'?'2,4':undefined)
+
+                // CRE-71 P3 (9): Path via shared helper. Orthogonal routing avoids
+                // every node EXCEPT this link's own endpoints.
+                const obstacles = link.linkstyle==='Orthogonal'
+                  ? nodes.filter(n=>n.id!==link.srcId&&n.id!==link.dstId)
+                          .map(n=>({x:n.x-ROUTE_PAD,y:n.y-ROUTE_PAD,w:NODE_BOX+ROUTE_PAD*2,h:NODE_BOX+ROUTE_PAD*2}))
+                  : []
+                const pathD = buildLinkPath(sx, sy, dx, dy, link.linkstyle, obstacles)
+
                 const angle=Math.atan2(dy-sy,dx-sx)*180/Math.PI
                 const d=58
                 const sxe=sx+Math.cos(angle*Math.PI/180)*d, sye=sy+Math.sin(angle*Math.PI/180)*d
@@ -919,7 +994,9 @@ export default function LabCanvas() {
                 
                 return(
                   <g key={link.id} style={{cursor:'context-menu'}} onContextMenu={e=>onLinkRightClick(e,link)}>
-                    <path d={pathD} stroke={linkColor} strokeWidth={linkWidth} strokeDasharray={dash} fill="none"/>
+                    <path d={pathD} stroke={linkColor} strokeWidth={linkWidth} strokeDasharray={dash} fill="none"
+                      markerEnd={(link.arrow==='end'||link.arrow==='both')?'url(#arrow-end)':undefined}
+                      markerStart={link.arrow==='both'?'url(#arrow-start)':undefined}/>
                     <path d={pathD} stroke="transparent" strokeWidth="14" fill="none"/>
                     {!hideLabels&&<>
                       {/* CRE-71/CRE-65-B: src/dst interface (port) labels — independent toggle */}
@@ -970,19 +1047,15 @@ export default function LabCanvas() {
                   
                   const sx = src.x + 24, sy = src.y + 24
                   const dx = dstObj.x + (net ? 30 : 24), dy = dstObj.y + (net ? 25 : 24)
-                  
-                  // Generate path (same logic as link rendering above)
-                  let pathD = `M${sx},${sy} L${dx},${dy}`
-                  if (link.linkstyle === 'Bezier') {
-                    const midX = (sx + dx) / 2, midY = (sy + dy) / 2
-                    const perpX = -(dy - sy) / 4, perpY = (dx - sx) / 4
-                    const cp1x = midX + perpX, cp1y = midY + perpY
-                    pathD = `M${sx},${sy} Q${cp1x},${cp1y} ${dx},${dy}`
-                  } else if (link.linkstyle === 'Flowchart') {
-                    const midX = (sx + dx) / 2
-                    pathD = `M${sx},${sy} L${midX},${sy} L${midX},${dy} L${dx},${dy}`
-                  }
-                  
+
+                  // CRE-71 P3 (9): Reuse the same path builder as the visible link
+                  // so animation particles follow the identical geometry.
+                  const obstacles = link.linkstyle === 'Orthogonal'
+                    ? nodes.filter(n=>n.id!==link.srcId&&n.id!==link.dstId)
+                            .map(n=>({x:n.x-ROUTE_PAD,y:n.y-ROUTE_PAD,w:NODE_BOX+ROUTE_PAD*2,h:NODE_BOX+ROUTE_PAD*2}))
+                    : []
+                  const pathD = buildLinkPath(sx, sy, dx, dy, link.linkstyle, obstacles)
+
                   return { id: link.id, path: pathD }
                 }).filter(Boolean)}
                 trafficEvents={trafficEvents}
