@@ -190,7 +190,7 @@ if __name__ == "__main__":
     print("="*70 + "\n")
 
     # Warn if binding to 0.0.0.0 (accessible beyond localhost)
-    host = sys.argv[sys.argv.index("--host") + 1] if "--host" in sys.argv else "0.0.0.0"
+    host = sys.argv[sys.argv.index("--host") + 1] if "--host" in sys.argv else "127.0.0.1"
     if host in ("0.0.0.0", "0"):
         print("⚠️  WARNING: Binding to 0.0.0.0 exposes OmniLab to your network")
         print("   Anyone on your network can access this instance WITHOUT authentication.")
@@ -202,4 +202,4 @@ if __name__ == "__main__":
             print("\n✋ Startup cancelled by user\n")
             sys.exit(0)
 
-    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=False)
+    uvicorn.run("main:app", host=host, port=5000, reload=False)
