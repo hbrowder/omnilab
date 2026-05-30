@@ -21,16 +21,139 @@ Usage:
     python3 migrate_from_eve.py import --file my-lab.zip
 """
 import argparse
+import base64
 import json
 import os
+import re
 import shutil
 import sys
 import uuid
 import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime
+from html import unescape
 from pathlib import Path
 from typing import Dict, List, Optional
+
+
+# ── EVE-NG annotation (drawing) parsing ──────────────────────────────────────
+#
+# EVE-NG stores canvas drawings under <objects><textobjects>. Each <textobject>
+# has type="text|circle|square" and a <data> element holding base64-encoded HTML
+# (an absolutely-positioned <div>). Geometry lives in the div's inline CSS, not
+# as XML attributes; shape color lives in an inner <svg> <ellipse>/<rect>.
+# We decode that into OmniLab's flat textobjects schema
+# (type/x/y/width/height/fill/stroke/text/z_index — see routes/textobjects.py).
+
+# EVE-NG declares type="text|circle|square|shape". The shape primitive is not
+# reliable from that attribute (a type="shape" can hold an <ellipse>), so for
+# anything non-text we infer the OmniLab type from the inner SVG element.
+# Fallback map for non-text objects with no recognizable SVG primitive.
+ANNOTATION_TYPE_MAP = {"circle": "circle", "square": "rectangle"}
+
+
+def _omni_type(eve_type: str, html: str) -> str:
+    """Decide the OmniLab textobject type from EVE type + decoded SVG."""
+    if eve_type == "text":
+        return "text"
+    if re.search(r"<(?:ellipse|circle)\b", html):
+        return "circle"
+    if re.search(r"<rect\b", html):
+        return "rectangle"
+    return ANNOTATION_TYPE_MAP.get(eve_type, "rectangle")
+
+# OmniLab defaults (mirrors TextObjectCreate) — used for text, which has no shape fill
+_DEFAULT_FILL = "rgba(88,166,255,0.3)"
+_DEFAULT_STROKE = "rgba(88,166,255,1)"
+
+_TAG_RE = re.compile(r"<[^>]+>")
+_BLOCK_BREAK_RE = re.compile(r"</p>|</div>|<br\s*/?>", re.I)
+
+
+def _parse_inline_style(style: str) -> Dict[str, str]:
+    """Parse a CSS 'k: v; k: v' string into a lowercased dict."""
+    out: Dict[str, str] = {}
+    for part in (style or "").split(";"):
+        if ":" in part:
+            k, v = part.split(":", 1)
+            out[k.strip().lower()] = v.strip()
+    return out
+
+
+def _px(val: Optional[str]) -> Optional[float]:
+    """'176px' → 176.0 ; 'auto'/None/'' → None."""
+    if not val:
+        return None
+    m = re.search(r"-?\d+(?:\.\d+)?", val)
+    return float(m.group()) if m else None
+
+
+def _html_to_text(inner_html: str) -> str:
+    """Flatten CKEditor block HTML to plain text, block boundaries → newlines."""
+    s = _BLOCK_BREAK_RE.sub("\n", inner_html)
+    s = _TAG_RE.sub("", s)
+    s = unescape(s).replace("\xa0", " ")
+    lines = [ln.strip() for ln in s.split("\n")]
+    while lines and not lines[0]:
+        lines.pop(0)
+    while lines and not lines[-1]:
+        lines.pop()
+    return "\n".join(lines)
+
+
+def parse_annotations(root: ET.Element) -> List[Dict]:
+    """Convert EVE-NG <objects><textobjects> into OmniLab textobject dicts."""
+    annotations: List[Dict] = []
+    for to in root.findall(".//textobjects/textobject"):
+        eve_type = (to.get("type") or "text").lower()
+
+        data_b64 = (to.findtext("data") or "").strip()
+        if not data_b64:
+            continue
+        try:
+            html = base64.b64decode(data_b64).decode("utf-8", "replace")
+        except Exception:
+            continue
+
+        omni_type = _omni_type(eve_type, html)
+
+        # Geometry from the outer div's inline style (first style= wins)
+        style_m = re.search(r'style="([^"]*)"', html)
+        style = _parse_inline_style(style_m.group(1) if style_m else "")
+        try:
+            z_index = int(float(style.get("z-index", 0)))
+        except (TypeError, ValueError):
+            z_index = 0
+
+        obj: Dict = {
+            "type": omni_type,
+            "x": _px(style.get("left")) or 0.0,
+            "y": _px(style.get("top")) or 0.0,
+            "width": _px(style.get("width")),
+            "height": _px(style.get("height")),
+            "z_index": z_index,
+            "name": to.get("name", ""),
+            "original_eve_id": to.get("id"),
+        }
+
+        if omni_type == "text":
+            inner = re.sub(r"^<div\b[^>]*>", "", html.strip(), count=1)
+            inner = re.sub(r"</div>\s*$", "", inner, count=1)
+            obj["text"] = _html_to_text(inner)
+            obj["fill"] = _DEFAULT_FILL
+            obj["stroke"] = _DEFAULT_STROKE
+        else:
+            # Color from the SVG primitive. \bstroke=" won't match stroke-width=".
+            shape_m = re.search(r"<(?:rect|ellipse)\b[^>]*>", html)
+            shape_tag = shape_m.group(0) if shape_m else ""
+            fill_m = re.search(r'\bfill="([^"]*)"', shape_tag)
+            stroke_m = re.search(r'\bstroke="([^"]*)"', shape_tag)
+            obj["fill"] = fill_m.group(1) if fill_m else "#FFFFFF"
+            obj["stroke"] = stroke_m.group(1) if stroke_m else "#000000"
+            obj["text"] = ""
+
+        annotations.append(obj)
+    return annotations
 
 
 class EVENGMigrator:
@@ -138,7 +261,10 @@ class EVENGMigrator:
                 "original_eve_id": net_id,
             }
             networks.append(network_data)
-        
+
+        # Convert annotations (drawing-tool text/shapes)
+        annotations = parse_annotations(root)
+
         # Build OmniLab lab JSON
         omni_lab = {
             "id": str(uuid.uuid4()),
@@ -149,6 +275,7 @@ class EVENGMigrator:
             "updated_at": datetime.utcnow().isoformat(),
             "nodes": nodes,
             "networks": networks,
+            "textobjects": annotations,
             "metadata": {
                 "migrated_from": "eve-ng",
                 "eve_version": lab_version,
@@ -169,6 +296,7 @@ class EVENGMigrator:
                 "lab_name": lab_name,
                 "node_count": len(nodes),
                 "network_count": len(networks),
+                "annotation_count": len(annotations),
                 "images": list(images_needed),
             }
             zf.writestr("manifest.json", json.dumps(manifest, indent=2))
@@ -186,7 +314,7 @@ class EVENGMigrator:
                     print(f"  ⚠ Image not found (manual copy needed): {image_name}")
         
         print(f"\n✅ Export complete: {output_path}")
-        print(f"   Nodes: {len(nodes)}, Networks: {len(networks)}")
+        print(f"   Nodes: {len(nodes)}, Networks: {len(networks)}, Annotations: {len(annotations)}")
         print(f"   Images: {len(images_needed)} referenced")
         
         return manifest
@@ -221,7 +349,8 @@ class EVENGMigrator:
             manifest = json.loads(zf.read("manifest.json"))
             print(f"   Lab: {manifest['lab_name']}")
             print(f"   Source: {manifest['source']}")
-            print(f"   Nodes: {manifest['node_count']}, Networks: {manifest['network_count']}")
+            print(f"   Nodes: {manifest['node_count']}, Networks: {manifest['network_count']}, "
+                  f"Annotations: {manifest.get('annotation_count', 0)}")
             
             # Read lab definition
             lab_data = json.loads(zf.read("lab.json"))
@@ -294,7 +423,27 @@ class EVENGMigrator:
                 print(f"   ✓ {node['name']} ({node['type']})")
             else:
                 print(f"   ✗ {node['name']} ({node['type']}) - {r.status_code}: {r.text[:100]}")
-        
+
+        # Create annotations (drawing-tool text/shapes)
+        annotations = lab_data.get("textobjects", [])
+        if annotations:
+            print(f"\n🎨 Creating {len(annotations)} annotations...")
+            fields = ("type", "x", "y", "width", "height", "fill", "stroke", "text", "z_index")
+            created = 0
+            for obj in annotations:
+                body = {k: obj[k] for k in fields if obj.get(k) is not None}
+                r = requests.post(
+                    f"{omnilab_api_url}/api/labs/{lab_id}/textobjects",
+                    json=body,
+                    headers=headers,
+                )
+                if r.status_code in (200, 201):
+                    created += 1
+                else:
+                    label = obj.get("name") or obj.get("type")
+                    print(f"   ✗ {label} - {r.status_code}: {r.text[:100]}")
+            print(f"   ✓ {created}/{len(annotations)} annotations")
+
         # Cleanup
         shutil.rmtree(temp_dir, ignore_errors=True)
         

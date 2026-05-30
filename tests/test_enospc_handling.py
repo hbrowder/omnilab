@@ -6,7 +6,7 @@ and surfaces them as DiskFullError with actionable guidance.
 import errno
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -17,6 +17,7 @@ from services.docker_provisioner import (
     DiskFullError,
     DockerProvisioner,
     DockerProvisionerError,
+    ImageNotFound,
     _is_disk_full_error,
 )
 
@@ -68,7 +69,7 @@ class TestDockerProvisionerEnospc:
 
     def test_ensure_image_raises_disk_full_on_oserror(self, mock_client):
         """ensure_image wraps OSError(ENOSPC) as DiskFullError."""
-        mock_client.images.get.side_effect = Exception("not found")  # ImageNotFound
+        mock_client.images.get.side_effect = ImageNotFound("not found")
         mock_client.api.pull.side_effect = OSError(errno.ENOSPC, "No space left")
 
         provisioner = DockerProvisioner(client=mock_client)
@@ -82,7 +83,7 @@ class TestDockerProvisionerEnospc:
 
     def test_ensure_image_raises_disk_full_on_pull_error_event(self, mock_client):
         """ensure_image detects 'no space left' in pull event error field."""
-        mock_client.images.get.side_effect = Exception("not found")
+        mock_client.images.get.side_effect = ImageNotFound("not found")
         mock_client.api.pull.return_value = [
             {"status": "Pulling fs layer", "id": "abc123"},
             {"error": "write /var/lib/docker: no space left on device"}
@@ -228,8 +229,11 @@ class TestLabCreationPreflightCheck:
             free=300 * (1024**3)  # 30% free
         )
 
-        # Mock DB operations
+        # Mock DB operations — execute/commit/rollback are awaited in the handler
         mock_db = MagicMock()
+        mock_db.execute = AsyncMock()
+        mock_db.commit = AsyncMock()
+        mock_db.rollback = AsyncMock()
         mock_get_db.return_value.__aiter__.return_value = [mock_db]
 
         from api.labs import create_lab, LabCreate
