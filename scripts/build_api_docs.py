@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from html import escape
 from pathlib import Path
@@ -31,6 +32,42 @@ from main import app  # noqa: E402
 
 # -- pull the spec --------------------------------------------------------
 spec = app.openapi()
+
+
+# -- canonicalize for reproducible output ---------------------------------
+# FastAPI derives a route's operationId suffix from `list(route.methods)[0]`,
+# and emits path-item method keys in `route.methods` (a set) order. Set
+# iteration is hash-randomized per process (PYTHONHASHSEED), so catch-all
+# routes that serve every method (e.g. the web proxy) produce a different
+# spec on every run — which makes the CI docs-drift check unwinnable. We
+# pin both: a stable method ordering, and deterministic, unique operationIds
+# wherever several methods of one path collide on the same id.
+_METHOD_ORDER = ("get", "post", "put", "patch", "delete", "options", "head", "trace")
+_METHOD_SUFFIX = re.compile(r"_(get|post|put|patch|delete|options|head|trace)$")
+
+
+def _canonicalize(spec: dict) -> None:
+    for path, item in list(spec.get("paths", {}).items()):
+        # Disambiguate operationIds shared across multiple methods of one path.
+        by_id: dict[str, list[str]] = {}
+        for method in item:
+            op = item[method]
+            if method in _METHOD_ORDER and isinstance(op, dict) and op.get("operationId"):
+                by_id.setdefault(op["operationId"], []).append(method)
+        for oid, methods in by_id.items():
+            if len(methods) > 1:  # collision → make each unique + deterministic
+                base = _METHOD_SUFFIX.sub("", oid)
+                for method in methods:
+                    item[method]["operationId"] = f"{base}_{method}"
+        # Stable method-key ordering (non-method keys like `parameters` kept first).
+        ordered = {k: v for k, v in item.items() if k not in _METHOD_ORDER}
+        for method in _METHOD_ORDER:
+            if method in item:
+                ordered[method] = item[method]
+        spec["paths"][path] = ordered
+
+
+_canonicalize(spec)
 
 # Strip routes that aren't part of the public REST API surface
 def _is_public(path: str) -> bool:
