@@ -1,0 +1,65 @@
+{
+  "_comment": "AI Lab Builder demo dataset (CRE-48 / AILB-8). Each scenario is a natural-language prompt the LLM agent must turn into a working lab via the registered tools. 'images' lists the docker images the agent is expected to use; every one MUST be present in list_inventory on a clean install (validated by test_agent_scenarios.py::test_dataset_images_are_in_inventory). 'min_nodes'/'max_nodes' bound the expected topology size; 'expect_links' is whether at least one link is expected. 'verify_start' marks the lightweight scenarios whose nodes the integration test actually boots against real docker; the heavy ones (k3s, wazuh) are topology-only by default to keep the deploy run cheap.",
+  "scenarios": [
+    {
+      "id": "ospf-4-frr",
+      "title": "OSPF area 0/1 with 4 FRR routers",
+      "prompt": "Build me an OSPF lab with 4 FRR routers. Put r1 and r2 in area 0 (the backbone) and r3 and r4 in area 1. Chain them r1-r2-r3-r4, push a basic OSPF startup config to each, and start them so the hellos can come up.",
+      "images": ["frrouting/frr:latest"],
+      "min_nodes": 4,
+      "max_nodes": 4,
+      "expect_links": true,
+      "verify_start": true
+    },
+    {
+      "id": "bgp-2-as",
+      "title": "eBGP between AS65001 and AS65002",
+      "prompt": "Create a BGP lab with two FRR routers, one in AS65001 and one in AS65002, connected by a single link. Configure an eBGP peering between them and start both routers.",
+      "images": ["frrouting/frr:latest"],
+      "min_nodes": 2,
+      "max_nodes": 2,
+      "expect_links": true,
+      "verify_start": true
+    },
+    {
+      "id": "campus-3tier",
+      "title": "3-tier campus (2 core, 2 dist, 4 access)",
+      "prompt": "Build a 3-tier campus topology: 2 core nodes, 2 distribution nodes, and 4 access nodes, wired core-to-distribution-to-access. No routing protocol needed, just the topology. Use ubuntu nodes.",
+      "images": ["ubuntu:22.04"],
+      "min_nodes": 8,
+      "max_nodes": 8,
+      "expect_links": true,
+      "verify_start": false
+    },
+    {
+      "id": "pentest-kali-dvwa",
+      "title": "Pentest lab: Kali + DVWA targets",
+      "prompt": "Set up a pentest lab with a Kali Linux attacker connected to a DVWA vulnerable web target on the same network. Add a second DVWA box as an additional target. Start everything.",
+      "images": ["kalilinux/kali-rolling", "vulnerables/web-dvwa"],
+      "min_nodes": 2,
+      "max_nodes": 3,
+      "expect_links": true,
+      "verify_start": true
+    },
+    {
+      "id": "k8s-k3s-3node",
+      "title": "Kubernetes 3-node k3s cluster",
+      "prompt": "Build a 3-node Kubernetes cluster using k3s: one server node and two agent nodes, all on the same network. Start them.",
+      "images": ["rancher/k3s:latest"],
+      "min_nodes": 3,
+      "max_nodes": 3,
+      "expect_links": true,
+      "verify_start": false
+    },
+    {
+      "id": "wazuh-soc",
+      "title": "Wazuh SOC with one Linux endpoint",
+      "prompt": "Create a small SOC lab: one Wazuh manager and one Ubuntu Linux endpoint that will report to it, connected on the same network. Start both.",
+      "images": ["wazuh/wazuh-manager:4.7.0", "ubuntu:22.04"],
+      "min_nodes": 2,
+      "max_nodes": 2,
+      "expect_links": true,
+      "verify_start": false
+    }
+  ]
+}
