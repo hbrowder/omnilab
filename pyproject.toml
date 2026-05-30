@@ -38,6 +38,9 @@ ignore = [
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
+# Put the repo root on sys.path so cross-test imports (`from tests.foo import ...`)
+# resolve under bare `pytest` the same way they do under `python -m pytest`.
+pythonpath = ["."]
 asyncio_mode = "auto"
 addopts = "-ra --strict-markers --tb=short -m 'not integration'"
 markers = [
