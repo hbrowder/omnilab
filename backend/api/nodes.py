@@ -118,7 +118,7 @@ async def add_node(data: NodeCreate):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to create node: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to create node: {str(e)}") from e
     return {"id": node_id, "name": data.name, "type": data.type, "status": "stopped", "console_type": data.console_type or "pty"}
 
 @router.get("/{node_id}")
@@ -138,7 +138,7 @@ async def delete_node(node_id: str):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to delete node: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to delete node: {str(e)}") from e
 
 import subprocess as _subprocess
 

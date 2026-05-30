@@ -38,7 +38,7 @@ async def create_lab(data: LabCreate):
     except Exception:
         # Never let disk check kill lab creation if shutil fails
         pass
-    
+
     lab_id = str(uuid.uuid4())
     async for db in get_db():
         try:
@@ -47,7 +47,7 @@ async def create_lab(data: LabCreate):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to create lab: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to create lab: {str(e)}") from e
     return {"id": lab_id, "name": data.name, "description": data.description}
 
 @router.get("/{lab_id}")
@@ -67,7 +67,7 @@ async def delete_lab(lab_id: str):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to delete lab: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to delete lab: {str(e)}") from e
 
 @router.get("/{lab_id}/topology")
 async def get_topology(lab_id: str):
@@ -190,7 +190,7 @@ async def import_lab(payload: ImportPayload):
             raise
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to import lab: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to import lab: {str(e)}") from e
     return {"id": lab_id, "name": name, "status": "stopped",
             "imported_nodes": len(name_to_new_id),
             "imported_links": len(payload.links or [])}
