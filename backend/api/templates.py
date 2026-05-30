@@ -602,7 +602,7 @@ async def deploy_template(template_id: str, lab_name: str | None = None):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to instantiate template: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to instantiate template: {str(e)}") from e
     return {
         "lab_id": lab_id,
         "name": lab_name or template["name"],

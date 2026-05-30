@@ -62,11 +62,11 @@ async def create_network(data: NetworkCreate):
     network_id = str(uuid.uuid4())
     bridge_name = f"br-{network_id[:8]}"
     timestamp = datetime.utcnow().isoformat()
-    
+
     # Validate network type
     if data.type not in ["bridge", "nat"]:
         raise HTTPException(status_code=400, detail="Network type must be 'bridge' or 'nat'")
-    
+
     # For NAT networks, create the actual infrastructure
     if data.type == "nat":
         try:
@@ -81,17 +81,17 @@ async def create_network(data: NetworkCreate):
             )
             status = "active"
         except NetworkError as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
     else:
         # Bridge networks are created on-demand when nodes connect
         status = "inactive"
-    
+
     # Store in database
     async for db in get_db():
         try:
             await db.execute(
-                """INSERT INTO networks 
-                   (id, lab_id, name, type, subnet, gateway, dhcp_start, dhcp_end, 
+                """INSERT INTO networks
+                   (id, lab_id, name, type, subnet, gateway, dhcp_start, dhcp_end,
                     dns_servers, bridge_name, status, created_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
@@ -107,8 +107,8 @@ async def create_network(data: NetworkCreate):
             # Rollback infrastructure if DB fails
             if data.type == "nat":
                 await destroy_nat_network(bridge_name, data.subnet)
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-    
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
+
     return {
         "id": network_id,
         "lab_id": data.lab_id,
@@ -131,10 +131,10 @@ async def get_network(network_id: str):
             "SELECT * FROM networks WHERE id = ?", (network_id,)
         ) as cur:
             row = await cur.fetchone()
-    
+
     if not row:
         raise HTTPException(status_code=404, detail="Network not found")
-    
+
     return dict(row)
 
 
@@ -147,12 +147,12 @@ async def delete_network(network_id: str):
             "SELECT * FROM networks WHERE id = ?", (network_id,)
         ) as cur:
             row = await cur.fetchone()
-        
+
         if not row:
             raise HTTPException(status_code=404, detail="Network not found")
-        
+
         network = dict(row)
-        
+
         # Destroy infrastructure if NAT network
         if network["type"] == "nat":
             try:
@@ -160,14 +160,14 @@ async def delete_network(network_id: str):
             except NetworkError as e:
                 # Log but don't fail - clean up DB anyway
                 print(f"Warning: Failed to destroy NAT network: {e}")
-        
+
         # Delete from database
         try:
             await db.execute("DELETE FROM networks WHERE id = ?", (network_id,))
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
 
 
 @router.get("/{network_id}/health")
@@ -178,15 +178,15 @@ async def get_network_health(network_id: str):
             "SELECT * FROM networks WHERE id = ?", (network_id,)
         ) as cur:
             row = await cur.fetchone()
-    
+
     if not row:
         raise HTTPException(status_code=404, detail="Network not found")
-    
+
     network = dict(row)
-    
+
     if network["type"] != "nat":
         return {"status": "n/a", "message": "Health checks only available for NAT networks"}
-    
+
     health = check_nat_health(network["bridge_name"])
     return health
 
@@ -213,7 +213,7 @@ async def create_link(data: LinkCreate):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to create link: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to create link: {str(e)}") from e
     return {"id": link_id, "lab_id": data.lab_id,
             "src_node_id": data.src_node_id, "dst_node_id": data.dst_node_id,
             "style": data.style or "solid",
@@ -256,7 +256,7 @@ async def set_link_quality(link_id: str, q: LinkQuality):
                 await db.commit()
             except Exception as e:
                 await db.rollback()
-                raise HTTPException(status_code=500, detail=f"Failed to update link quality: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Failed to update link quality: {str(e)}") from e
 
         async with db.execute("SELECT * FROM links WHERE id = ?", (link_id,)) as cur:
             updated = await cur.fetchone()
@@ -271,7 +271,7 @@ async def delete_link(link_id: str):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to delete link: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to delete link: {str(e)}") from e
     return None
 
 
@@ -302,10 +302,10 @@ class CaptureStart(BaseModel):
 async def start_packet_capture(data: CaptureStart):
     """
     Start packet capture on a network link.
-    
+
     Requires tcpdump with CAP_NET_RAW capability:
         sudo setcap cap_net_raw,cap_net_admin=eip $(which tcpdump)
-    
+
     BPF filter examples:
         - "tcp port 80" (HTTP traffic)
         - "icmp" (ping packets)
@@ -323,9 +323,9 @@ async def start_packet_capture(data: CaptureStart):
         )
         return result
     except CaptureError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to start capture: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to start capture: {str(e)}") from e
 
 
 @router.post("/captures/{capture_id}/stop")
@@ -335,11 +335,11 @@ async def stop_packet_capture(capture_id: str):
         result = await stop_capture(capture_id)
         return result
     except CaptureError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
         import traceback
         error_detail = f"Failed to stop capture: {str(e)}\n{traceback.format_exc()}"
-        raise HTTPException(status_code=500, detail=error_detail)
+        raise HTTPException(status_code=500, detail=error_detail) from e
 
 
 @router.get("/captures")
@@ -352,7 +352,7 @@ async def list_active_captures():
 async def download_capture(capture_id: str):
     """
     Download PCAP file for a capture.
-    
+
     Can be opened in Wireshark, tcpdump, or tshark.
     """
     try:
@@ -363,7 +363,7 @@ async def download_capture(capture_id: str):
             filename=pcap_path.name,
         )
     except CaptureError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.post("/captures/cleanup")

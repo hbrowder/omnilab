@@ -5,7 +5,6 @@ JWT token generation/validation + password hashing with bcrypt.
 """
 import os
 from datetime import datetime, timedelta
-from typing import Optional
 
 import bcrypt
 import jwt
@@ -41,10 +40,10 @@ def create_access_token(user_id: str, username: str, role: str) -> str:
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def decode_access_token(token: str) -> Optional[dict]:
+def decode_access_token(token: str) -> dict | None:
     """
     Decode and validate a JWT token.
-    
+
     Returns payload dict if valid, None if invalid/expired.
     """
     try:
@@ -67,7 +66,7 @@ ROLE_HIERARCHY = {
 def has_permission(user_role: str, required_role: str) -> bool:
     """
     Check if user_role has sufficient permissions.
-    
+
     Admin can do everything, power-user can do power-user + readonly actions,
     readonly can only do readonly actions.
     """

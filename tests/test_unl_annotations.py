@@ -17,10 +17,10 @@ import pytest
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 from migrate_lab import (  # noqa: E402
-    parse_annotations,
+    _html_to_text,
     _parse_inline_style,
     _px,
-    _html_to_text,
+    parse_annotations,
 )
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "unl"

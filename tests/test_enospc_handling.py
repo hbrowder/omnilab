@@ -150,8 +150,9 @@ class TestHealthEndpointDiskWarnings:
         )
 
         # Import and call the endpoint
-        from api.health import get_system_metrics
         import asyncio
+
+        from api.health import get_system_metrics
         result = asyncio.run(get_system_metrics())
 
         assert result["disk_critical"] is True
@@ -169,8 +170,9 @@ class TestHealthEndpointDiskWarnings:
             percent=92.0
         )
 
-        from api.health import get_system_metrics
         import asyncio
+
+        from api.health import get_system_metrics
         result = asyncio.run(get_system_metrics())
 
         assert result["disk_critical"] is False
@@ -188,8 +190,9 @@ class TestHealthEndpointDiskWarnings:
             percent=60.0
         )
 
-        from api.health import get_system_metrics
         import asyncio
+
+        from api.health import get_system_metrics
         result = asyncio.run(get_system_metrics())
 
         assert result["disk_critical"] is False
@@ -208,9 +211,10 @@ class TestLabCreationPreflightCheck:
             free=80 * (1024**3)  # 8% free
         )
 
-        from api.labs import create_lab, LabCreate
-        from fastapi import HTTPException
         import asyncio
+
+        from api.labs import LabCreate, create_lab
+        from fastapi import HTTPException
 
         with pytest.raises(HTTPException) as exc_info:
             asyncio.run(create_lab(LabCreate(name="test", description="")))
@@ -236,8 +240,9 @@ class TestLabCreationPreflightCheck:
         mock_db.rollback = AsyncMock()
         mock_get_db.return_value.__aiter__.return_value = [mock_db]
 
-        from api.labs import create_lab, LabCreate
         import asyncio
+
+        from api.labs import LabCreate, create_lab
 
         result = asyncio.run(create_lab(LabCreate(name="test", description="")))
 
