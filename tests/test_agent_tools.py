@@ -16,10 +16,8 @@ from __future__ import annotations
 import uuid
 
 import pytest
-
 from services import agent_tools as tools
 from services.agent_tools import AILBError
-
 
 # ============================================================================
 # Fake in-memory Repo
@@ -357,8 +355,8 @@ def test_link_nodes_validation_missing_node_id(repo):
 @pytest.fixture()
 def http_repo(client):
     """Inject a shared FakeRepo into the app for the duration of the test."""
-    from main import app
     from api.agent import get_repo
+    from main import app
 
     fake = FakeRepo()
     app.dependency_overrides[get_repo] = lambda: fake

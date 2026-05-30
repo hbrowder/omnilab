@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0b0d12">
 <meta name="color-scheme" content="dark">
 <title>OmniLab REST API — Reference</title>
-<meta name="description" content="OmniLab REST API reference. 48 endpoints covering labs, nodes, networks, license, billing, health, and more.">
+<meta name="description" content="OmniLab REST API reference. 106 endpoints covering labs, nodes, networks, license, billing, health, and more.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="canonical" href="https://omnilab.io/docs/api/">
 <style>
@@ -166,7 +166,7 @@
     </a>
     <div class="sb-version">v1.0.0</div>
     <input class="sb-search" type="search" placeholder="Search endpoints…" autocomplete="off" id="q" aria-label="Search endpoints">
-    <nav><div class="nav-group" data-tag="license"><h3>license</h3><a class="nav-op" href="#post-api-license-activate" data-q="post /api/license/activate"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/license/activate</span></a><a class="nav-op" href="#post-api-license-deactivate" data-q="post /api/license/deactivate"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/license/deactivate</span></a><a class="nav-op" href="#post-api-license-generate" data-q="post /api/license/generate"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/license/generate</span></a><a class="nav-op" href="#get-api-license-status" data-q="get /api/license/status"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/license/status</span></a></div><div class="nav-group" data-tag="billing"><h3>billing</h3><a class="nav-op" href="#post-api-billing-create-checkout-session" data-q="post /api/billing/create-checkout-session"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/billing/create-checkout-session</span></a><a class="nav-op" href="#get-api-billing-health" data-q="get /api/billing/health"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/billing/health</span></a><a class="nav-op" href="#post-api-billing-webhook" data-q="post /api/billing/webhook"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/billing/webhook</span></a></div><div class="nav-group" data-tag="labs"><h3>labs</h3><a class="nav-op" href="#get-api-labs" data-q="get /api/labs/"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/</span></a><a class="nav-op" href="#post-api-labs" data-q="post /api/labs/"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/labs/</span></a><a class="nav-op" href="#post-api-labs-import" data-q="post /api/labs/import"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/labs/import</span></a><a class="nav-op" href="#get-api-labs-lab_id" data-q="get /api/labs/{lab_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}</span></a><a class="nav-op" href="#delete-api-labs-lab_id" data-q="delete /api/labs/{lab_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/labs/{lab_id}</span></a><a class="nav-op" href="#get-api-labs-lab_id-export" data-q="get /api/labs/{lab_id}/export"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}/export</span></a><a class="nav-op" href="#get-api-labs-lab_id-topology" data-q="get /api/labs/{lab_id}/topology"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}/topology</span></a></div><div class="nav-group" data-tag="nodes"><h3>nodes</h3><a class="nav-op" href="#post-api-nodes" data-q="post /api/nodes/"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/</span></a><a class="nav-op" href="#get-api-nodes-node_id" data-q="get /api/nodes/{node_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/nodes/{node_id}</span></a><a class="nav-op" href="#patch-api-nodes-node_id" data-q="patch /api/nodes/{node_id}"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/api/nodes/{node_id}</span></a><a class="nav-op" href="#delete-api-nodes-node_id" data-q="delete /api/nodes/{node_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/nodes/{node_id}</span></a><a class="nav-op" href="#post-api-nodes-node_id-rdp-config" data-q="post /api/nodes/{node_id}/rdp-config"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/{node_id}/rdp-config</span></a><a class="nav-op" href="#post-api-nodes-node_id-start" data-q="post /api/nodes/{node_id}/start"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/{node_id}/start</span></a><a class="nav-op" href="#post-api-nodes-node_id-stop" data-q="post /api/nodes/{node_id}/stop"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/{node_id}/stop</span></a></div><div class="nav-group" data-tag="networks"><h3>networks</h3><a class="nav-op" href="#get-api-networks" data-q="get /api/networks/"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/networks/</span></a><a class="nav-op" href="#post-api-networks-links" data-q="post /api/networks/links"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/networks/links</span></a><a class="nav-op" href="#get-api-networks-links-lab_id" data-q="get /api/networks/links/{lab_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/networks/links/{lab_id}</span></a><a class="nav-op" href="#delete-api-networks-links-link_id" data-q="delete /api/networks/links/{link_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/networks/links/{link_id}</span></a><a class="nav-op" href="#patch-api-networks-links-link_id-quality" data-q="patch /api/networks/links/{link_id}/quality"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/api/networks/links/{link_id}/quality</span></a></div><div class="nav-group" data-tag="templates"><h3>templates</h3><a class="nav-op" href="#get-api-templates" data-q="get /api/templates/"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/templates/</span></a><a class="nav-op" href="#get-api-templates-categories" data-q="get /api/templates/categories"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/templates/categories</span></a><a class="nav-op" href="#get-api-templates-template_id" data-q="get /api/templates/{template_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/templates/{template_id}</span></a><a class="nav-op" href="#post-api-templates-template_id-deploy" data-q="post /api/templates/{template_id}/deploy"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/templates/{template_id}/deploy</span></a></div><div class="nav-group" data-tag="system"><h3>system</h3><a class="nav-op" href="#get-api-system-email-health" data-q="get /api/system/email-health"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/email-health</span></a><a class="nav-op" href="#get-api-system-first-run" data-q="get /api/system/first-run"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/first-run</span></a><a class="nav-op" href="#post-api-system-first-run-complete" data-q="post /api/system/first-run/complete"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/system/first-run/complete</span></a><a class="nav-op" href="#get-api-system-health" data-q="get /api/system/health"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/health</span></a><a class="nav-op" href="#get-api-system-info" data-q="get /api/system/info"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/info</span></a></div><div class="nav-group" data-tag="health"><h3>health</h3><a class="nav-op" href="#get-api-health-docker" data-q="get /api/health/docker"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/docker</span></a><a class="nav-op" href="#get-api-health-lab-stats" data-q="get /api/health/lab-stats"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/lab-stats</span></a><a class="nav-op" href="#get-api-health-metrics" data-q="get /api/health/metrics"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/metrics</span></a><a class="nav-op" href="#get-api-health-network" data-q="get /api/health/network"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/network</span></a></div><div class="nav-group" data-tag="backup"><h3>backup</h3><a class="nav-op" href="#post-api-backup-export" data-q="post /api/backup/export"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/backup/export</span></a><a class="nav-op" href="#post-api-backup-import" data-q="post /api/backup/import"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/backup/import</span></a><a class="nav-op" href="#post-api-backup-preview" data-q="post /api/backup/preview"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/backup/preview</span></a></div><div class="nav-group" data-tag="updates"><h3>updates</h3><a class="nav-op" href="#get-api-updates-check" data-q="get /api/updates/check"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/updates/check</span></a><a class="nav-op" href="#post-api-updates-dismiss" data-q="post /api/updates/dismiss"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/updates/dismiss</span></a><a class="nav-op" href="#get-api-updates-settings" data-q="get /api/updates/settings"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/updates/settings</span></a><a class="nav-op" href="#post-api-updates-settings" data-q="post /api/updates/settings"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/updates/settings</span></a><a class="nav-op" href="#post-api-updates-snooze" data-q="post /api/updates/snooze"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/updates/snooze</span></a></div><div class="nav-group" data-tag="console"><h3>console</h3><a class="nav-op" href="#get-api-console-node_id-info" data-q="get /api/console/{node_id}/info"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/console/{node_id}/info</span></a></div></nav>
+    <nav><div class="nav-group" data-tag="license"><h3>license</h3><a class="nav-op" href="#post-api-license-activate" data-q="post /api/license/activate"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/license/activate</span></a><a class="nav-op" href="#post-api-license-deactivate" data-q="post /api/license/deactivate"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/license/deactivate</span></a><a class="nav-op" href="#post-api-license-generate" data-q="post /api/license/generate"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/license/generate</span></a><a class="nav-op" href="#get-api-license-status" data-q="get /api/license/status"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/license/status</span></a></div><div class="nav-group" data-tag="billing"><h3>billing</h3><a class="nav-op" href="#post-api-billing-create-checkout-session" data-q="post /api/billing/create-checkout-session"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/billing/create-checkout-session</span></a><a class="nav-op" href="#get-api-billing-health" data-q="get /api/billing/health"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/billing/health</span></a><a class="nav-op" href="#post-api-billing-webhook" data-q="post /api/billing/webhook"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/billing/webhook</span></a></div><div class="nav-group" data-tag="labs"><h3>labs</h3><a class="nav-op" href="#get-api-labs" data-q="get /api/labs/"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/</span></a><a class="nav-op" href="#post-api-labs" data-q="post /api/labs/"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/labs/</span></a><a class="nav-op" href="#post-api-labs-import" data-q="post /api/labs/import"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/labs/import</span></a><a class="nav-op" href="#get-api-labs-lab_id" data-q="get /api/labs/{lab_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}</span></a><a class="nav-op" href="#delete-api-labs-lab_id" data-q="delete /api/labs/{lab_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/labs/{lab_id}</span></a><a class="nav-op" href="#get-api-labs-lab_id-export" data-q="get /api/labs/{lab_id}/export"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}/export</span></a><a class="nav-op" href="#get-api-labs-lab_id-nodes-node_id-web-info" data-q="get /api/labs/{lab_id}/nodes/{node_id}/web-info"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}/nodes/{node_id}/web-info</span></a><a class="nav-op" href="#get-api-labs-lab_id-topology" data-q="get /api/labs/{lab_id}/topology"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}/topology</span></a></div><div class="nav-group" data-tag="nodes"><h3>nodes</h3><a class="nav-op" href="#post-api-nodes" data-q="post /api/nodes/"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/</span></a><a class="nav-op" href="#get-api-nodes-node_id" data-q="get /api/nodes/{node_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/nodes/{node_id}</span></a><a class="nav-op" href="#patch-api-nodes-node_id" data-q="patch /api/nodes/{node_id}"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/api/nodes/{node_id}</span></a><a class="nav-op" href="#delete-api-nodes-node_id" data-q="delete /api/nodes/{node_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/nodes/{node_id}</span></a><a class="nav-op" href="#post-api-nodes-node_id-rdp-config" data-q="post /api/nodes/{node_id}/rdp-config"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/{node_id}/rdp-config</span></a><a class="nav-op" href="#post-api-nodes-node_id-start" data-q="post /api/nodes/{node_id}/start"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/{node_id}/start</span></a><a class="nav-op" href="#post-api-nodes-node_id-stop" data-q="post /api/nodes/{node_id}/stop"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/nodes/{node_id}/stop</span></a></div><div class="nav-group" data-tag="networks"><h3>networks</h3><a class="nav-op" href="#get-api-networks" data-q="get /api/networks/"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/networks/</span></a><a class="nav-op" href="#post-api-networks" data-q="post /api/networks/"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/networks/</span></a><a class="nav-op" href="#get-api-networks-captures" data-q="get /api/networks/captures"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/networks/captures</span></a><a class="nav-op" href="#post-api-networks-captures-cleanup" data-q="post /api/networks/captures/cleanup"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/networks/captures/cleanup</span></a><a class="nav-op" href="#post-api-networks-captures-start" data-q="post /api/networks/captures/start"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/networks/captures/start</span></a><a class="nav-op" href="#get-api-networks-captures-capture_id-download" data-q="get /api/networks/captures/{capture_id}/download"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/networks/captures/{capture_id}/download</span></a><a class="nav-op" href="#post-api-networks-captures-capture_id-stop" data-q="post /api/networks/captures/{capture_id}/stop"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/networks/captures/{capture_id}/stop</span></a><a class="nav-op" href="#post-api-networks-links" data-q="post /api/networks/links"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/networks/links</span></a><a class="nav-op" href="#get-api-networks-links-lab_id" data-q="get /api/networks/links/{lab_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/networks/links/{lab_id}</span></a><a class="nav-op" href="#delete-api-networks-links-link_id" data-q="delete /api/networks/links/{link_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/networks/links/{link_id}</span></a><a class="nav-op" href="#patch-api-networks-links-link_id-quality" data-q="patch /api/networks/links/{link_id}/quality"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/api/networks/links/{link_id}/quality</span></a><a class="nav-op" href="#get-api-networks-network_id" data-q="get /api/networks/{network_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/networks/{network_id}</span></a><a class="nav-op" href="#delete-api-networks-network_id" data-q="delete /api/networks/{network_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/networks/{network_id}</span></a><a class="nav-op" href="#get-api-networks-network_id-health" data-q="get /api/networks/{network_id}/health"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/networks/{network_id}/health</span></a></div><div class="nav-group" data-tag="templates"><h3>templates</h3><a class="nav-op" href="#get-api-templates" data-q="get /api/templates/"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/templates/</span></a><a class="nav-op" href="#get-api-templates-categories" data-q="get /api/templates/categories"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/templates/categories</span></a><a class="nav-op" href="#get-api-templates-template_id" data-q="get /api/templates/{template_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/templates/{template_id}</span></a><a class="nav-op" href="#post-api-templates-template_id-deploy" data-q="post /api/templates/{template_id}/deploy"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/templates/{template_id}/deploy</span></a></div><div class="nav-group" data-tag="system"><h3>system</h3><a class="nav-op" href="#get-api-system-email-health" data-q="get /api/system/email-health"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/email-health</span></a><a class="nav-op" href="#get-api-system-first-run" data-q="get /api/system/first-run"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/first-run</span></a><a class="nav-op" href="#post-api-system-first-run-complete" data-q="post /api/system/first-run/complete"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/system/first-run/complete</span></a><a class="nav-op" href="#get-api-system-health" data-q="get /api/system/health"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/health</span></a><a class="nav-op" href="#get-api-system-info" data-q="get /api/system/info"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/info</span></a><a class="nav-op" href="#get-api-system-permissions" data-q="get /api/system/permissions"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/system/permissions</span></a><a class="nav-op" href="#post-api-system-permissions-fix" data-q="post /api/system/permissions/fix"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/system/permissions/fix</span></a></div><div class="nav-group" data-tag="health"><h3>health</h3><a class="nav-op" href="#get-api-health-docker" data-q="get /api/health/docker"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/docker</span></a><a class="nav-op" href="#get-api-health-lab-stats" data-q="get /api/health/lab-stats"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/lab-stats</span></a><a class="nav-op" href="#get-api-health-metrics" data-q="get /api/health/metrics"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/metrics</span></a><a class="nav-op" href="#get-api-health-network" data-q="get /api/health/network"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/health/network</span></a></div><div class="nav-group" data-tag="backup"><h3>backup</h3><a class="nav-op" href="#post-api-backup-export" data-q="post /api/backup/export"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/backup/export</span></a><a class="nav-op" href="#post-api-backup-import" data-q="post /api/backup/import"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/backup/import</span></a><a class="nav-op" href="#post-api-backup-preview" data-q="post /api/backup/preview"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/backup/preview</span></a></div><div class="nav-group" data-tag="updates"><h3>updates</h3><a class="nav-op" href="#get-api-updates-check" data-q="get /api/updates/check"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/updates/check</span></a><a class="nav-op" href="#post-api-updates-dismiss" data-q="post /api/updates/dismiss"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/updates/dismiss</span></a><a class="nav-op" href="#get-api-updates-settings" data-q="get /api/updates/settings"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/updates/settings</span></a><a class="nav-op" href="#post-api-updates-settings" data-q="post /api/updates/settings"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/updates/settings</span></a><a class="nav-op" href="#post-api-updates-snooze" data-q="post /api/updates/snooze"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/updates/snooze</span></a></div><div class="nav-group" data-tag="console"><h3>console</h3><a class="nav-op" href="#get-api-console-node_id-info" data-q="get /api/console/{node_id}/info"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/console/{node_id}/info</span></a></div><div class="nav-group" data-tag="agent"><h3>agent</h3><a class="nav-op" href="#post-api-agent-build" data-q="post /api/agent/build"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/agent/build</span></a><a class="nav-op" href="#post-api-agent-build-run_id-cancel" data-q="post /api/agent/build/{run_id}/cancel"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/agent/build/{run_id}/cancel</span></a><a class="nav-op" href="#get-api-agent-runs" data-q="get /api/agent/runs"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/agent/runs</span></a><a class="nav-op" href="#post-api-agent-test" data-q="post /api/agent/test"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/agent/test</span></a><a class="nav-op" href="#get-api-agent-tools" data-q="get /api/agent/tools"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/agent/tools</span></a><a class="nav-op" href="#post-api-agent-tools-name" data-q="post /api/agent/tools/{name}"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/agent/tools/{name}</span></a></div><div class="nav-group" data-tag="auth"><h3>auth</h3><a class="nav-op" href="#post-api-auth-login" data-q="post /api/auth/login"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/auth/login</span></a><a class="nav-op" href="#post-api-auth-logout" data-q="post /api/auth/logout"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/auth/logout</span></a><a class="nav-op" href="#get-api-auth-me" data-q="get /api/auth/me"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/auth/me</span></a><a class="nav-op" href="#post-api-auth-refresh" data-q="post /api/auth/refresh"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/auth/refresh</span></a><a class="nav-op" href="#post-api-auth-register" data-q="post /api/auth/register"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/auth/register</span></a><a class="nav-op" href="#get-api-auth-users" data-q="get /api/auth/users/"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/auth/users/</span></a><a class="nav-op" href="#get-api-auth-users-user_id" data-q="get /api/auth/users/{user_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/auth/users/{user_id}</span></a><a class="nav-op" href="#put-api-auth-users-user_id" data-q="put /api/auth/users/{user_id}"><span class="badge" style="background:#8b5cf6">PUT</span><span class="nav-path">/api/auth/users/{user_id}</span></a><a class="nav-op" href="#delete-api-auth-users-user_id" data-q="delete /api/auth/users/{user_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/auth/users/{user_id}</span></a><a class="nav-op" href="#patch-api-auth-users-user_id-activate" data-q="patch /api/auth/users/{user_id}/activate"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/api/auth/users/{user_id}/activate</span></a><a class="nav-op" href="#patch-api-auth-users-user_id-password" data-q="patch /api/auth/users/{user_id}/password"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/api/auth/users/{user_id}/password</span></a></div><div class="nav-group" data-tag="misc"><h3>misc</h3><a class="nav-op" href="#get-labs-lab_id-nodes-node_id-web-path" data-q="get /labs/{lab_id}/nodes/{node_id}/web/{path}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/labs/{lab_id}/nodes/{node_id}/web/{path}</span></a><a class="nav-op" href="#post-labs-lab_id-nodes-node_id-web-path" data-q="post /labs/{lab_id}/nodes/{node_id}/web/{path}"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/labs/{lab_id}/nodes/{node_id}/web/{path}</span></a><a class="nav-op" href="#put-labs-lab_id-nodes-node_id-web-path" data-q="put /labs/{lab_id}/nodes/{node_id}/web/{path}"><span class="badge" style="background:#8b5cf6">PUT</span><span class="nav-path">/labs/{lab_id}/nodes/{node_id}/web/{path}</span></a><a class="nav-op" href="#patch-labs-lab_id-nodes-node_id-web-path" data-q="patch /labs/{lab_id}/nodes/{node_id}/web/{path}"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/labs/{lab_id}/nodes/{node_id}/web/{path}</span></a><a class="nav-op" href="#delete-labs-lab_id-nodes-node_id-web-path" data-q="delete /labs/{lab_id}/nodes/{node_id}/web/{path}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/labs/{lab_id}/nodes/{node_id}/web/{path}</span></a><a class="nav-op" href="#options-labs-lab_id-nodes-node_id-web-path" data-q="options /labs/{lab_id}/nodes/{node_id}/web/{path}"><span class="badge" style="background:#6b7280">OPT</span><span class="nav-path">/labs/{lab_id}/nodes/{node_id}/web/{path}</span></a><a class="nav-op" href="#head-labs-lab_id-nodes-node_id-web-path" data-q="head /labs/{lab_id}/nodes/{node_id}/web/{path}"><span class="badge" style="background:#6b7280">HEAD</span><span class="nav-path">/labs/{lab_id}/nodes/{node_id}/web/{path}</span></a></div><div class="nav-group" data-tag="settings"><h3>settings</h3><a class="nav-op" href="#get-api-settings-ai-provider" data-q="get /api/settings/ai-provider"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/settings/ai-provider</span></a><a class="nav-op" href="#post-api-settings-ai-provider" data-q="post /api/settings/ai-provider"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/settings/ai-provider</span></a></div><div class="nav-group" data-tag="template-library"><h3>template-library</h3><a class="nav-op" href="#get-api-template-library" data-q="get /api/template-library/"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/template-library/</span></a><a class="nav-op" href="#post-api-template-library" data-q="post /api/template-library/"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/template-library/</span></a><a class="nav-op" href="#get-api-template-library-categories" data-q="get /api/template-library/categories"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/template-library/categories</span></a><a class="nav-op" href="#post-api-template-library-upload" data-q="post /api/template-library/upload"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/template-library/upload</span></a><a class="nav-op" href="#get-api-template-library-vendors" data-q="get /api/template-library/vendors"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/template-library/vendors</span></a><a class="nav-op" href="#get-api-template-library-template_id" data-q="get /api/template-library/{template_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/template-library/{template_id}</span></a><a class="nav-op" href="#put-api-template-library-template_id" data-q="put /api/template-library/{template_id}"><span class="badge" style="background:#8b5cf6">PUT</span><span class="nav-path">/api/template-library/{template_id}</span></a><a class="nav-op" href="#delete-api-template-library-template_id" data-q="delete /api/template-library/{template_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/template-library/{template_id}</span></a><a class="nav-op" href="#patch-api-template-library-template_id-visibility" data-q="patch /api/template-library/{template_id}/visibility"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/api/template-library/{template_id}/visibility</span></a></div><div class="nav-group" data-tag="textobjects"><h3>textobjects</h3><a class="nav-op" href="#get-api-labs-lab_id-textobjects" data-q="get /api/labs/{lab_id}/textobjects"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}/textobjects</span></a><a class="nav-op" href="#post-api-labs-lab_id-textobjects" data-q="post /api/labs/{lab_id}/textobjects"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/labs/{lab_id}/textobjects</span></a><a class="nav-op" href="#get-api-labs-lab_id-textobjects-obj_id" data-q="get /api/labs/{lab_id}/textobjects/{obj_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}/textobjects/{obj_id}</span></a><a class="nav-op" href="#patch-api-labs-lab_id-textobjects-obj_id" data-q="patch /api/labs/{lab_id}/textobjects/{obj_id}"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/api/labs/{lab_id}/textobjects/{obj_id}</span></a><a class="nav-op" href="#delete-api-labs-lab_id-textobjects-obj_id" data-q="delete /api/labs/{lab_id}/textobjects/{obj_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/labs/{lab_id}/textobjects/{obj_id}</span></a></div><div class="nav-group" data-tag="traffic-filters"><h3>traffic-filters</h3><a class="nav-op" href="#get-api-labs-lab_id-filters" data-q="get /api/labs/{lab_id}/filters"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}/filters</span></a><a class="nav-op" href="#post-api-labs-lab_id-filters" data-q="post /api/labs/{lab_id}/filters"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/labs/{lab_id}/filters</span></a><a class="nav-op" href="#get-api-labs-lab_id-filters-filter_id" data-q="get /api/labs/{lab_id}/filters/{filter_id}"><span class="badge" style="background:#3b82f6">GET</span><span class="nav-path">/api/labs/{lab_id}/filters/{filter_id}</span></a><a class="nav-op" href="#patch-api-labs-lab_id-filters-filter_id" data-q="patch /api/labs/{lab_id}/filters/{filter_id}"><span class="badge" style="background:#f59e0b">PATCH</span><span class="nav-path">/api/labs/{lab_id}/filters/{filter_id}</span></a><a class="nav-op" href="#delete-api-labs-lab_id-filters-filter_id" data-q="delete /api/labs/{lab_id}/filters/{filter_id}"><span class="badge" style="background:#ef4444">DEL</span><span class="nav-path">/api/labs/{lab_id}/filters/{filter_id}</span></a><a class="nav-op" href="#post-api-labs-lab_id-filters-filter_id-toggle" data-q="post /api/labs/{lab_id}/filters/{filter_id}/toggle"><span class="badge" style="background:#10b981">POST</span><span class="nav-path">/api/labs/{lab_id}/filters/{filter_id}/toggle</span></a></div></nav>
   </aside>
   <main>
     <div class="preamble">
@@ -177,7 +177,7 @@
         Spec: <a href="openapi.json">openapi.json</a>
       </p>
       <p>
-        48 public endpoints across 11 resource groups. Generated from the live FastAPI schema — this page never drifts from the running server.
+        106 public endpoints across 18 resource groups. Generated from the live FastAPI schema — this page never drifts from the running server.
       </p>
       <p>
         Local interactive docs (with Try-it-now): visit <code>/docs</code> (Swagger UI) or <code>/redoc</code> on your running OmniLab instance.
@@ -349,6 +349,17 @@ For now, useful for testing.</p>
   
   <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
 </article>
+<article class="endpoint" id="get-api-labs-lab_id-nodes-node_id-web-info">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/labs/{lab_id}/nodes/{node_id}/web-info</code>
+  </header>
+  <h2>Web Info</h2>
+  <p class="desc">Describe whether a node has a web UI, and what URL the frontend should hit.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
 <article class="endpoint" id="get-api-labs-lab_id-topology">
   <header>
     <span class="badge" style="background:#3b82f6">GET</span>
@@ -438,7 +449,10 @@ For now, useful for testing.</p>
     <code class="path">/api/nodes/{node_id}/start</code>
   </header>
   <h2>Start Node</h2>
-  <p class="desc">Start a node. For VNC nodes, spawns QEMU and assigns a VNC port.</p>
+  <p class="desc">Start a node. Branches on node.type:
+- &#x27;docker&#x27;: pulls image (if needed), ensures lab network, runs container.
+- everything else (with console_type==&#x27;vnc&#x27;): spawns QEMU and assigns VNC port.
+- PTY nodes: just flips status to running.</p>
   <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
   
   <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
@@ -449,7 +463,9 @@ For now, useful for testing.</p>
     <code class="path">/api/nodes/{node_id}/stop</code>
   </header>
   <h2>Stop Node</h2>
-  <p class="desc">Stop a node. For VNC nodes, kills the QEMU process.</p>
+  <p class="desc">Stop a node. For docker nodes, removes the container and tears down the
+lab network if no other docker nodes in the same lab are still running.
+For VNC nodes, kills the QEMU process.</p>
   <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
   
   <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
@@ -460,10 +476,103 @@ For now, useful for testing.</p>
     <code class="path">/api/networks/</code>
   </header>
   <h2>List Networks</h2>
+  <p class="desc">List all networks, optionally filtered by lab_id.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code></td><td>query</td><td>—</td><td></td></tr></tbody></table>
   
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-networks">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/networks/</code>
+  </header>
+  <h2>Create Network</h2>
+  <p class="desc">Create a new network (bridge or NAT).</p>
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;lab_id&quot;: &quot;string&quot;,
+  &quot;name&quot;: &quot;string&quot;,
+  &quot;type&quot;: &quot;string&quot;,
+  &quot;subnet&quot;: &quot;string&quot;,
+  &quot;gateway&quot;: &quot;string&quot;,
+  &quot;dhcp_start&quot;: &quot;string&quot;,
+  &quot;dhcp_end&quot;: &quot;string&quot;,
+  &quot;dns_servers&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">201</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-networks-captures">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/networks/captures</code>
+  </header>
+  <h2>List Active Captures</h2>
+  <p class="desc">List all active packet captures.</p>
   
   
   <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-networks-captures-cleanup">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/networks/captures/cleanup</code>
+  </header>
+  <h2>Cleanup Captures</h2>
+  <p class="desc">Delete PCAP files older than max_age_hours (default: 24).</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>max_age_hours</code></td><td>query</td><td>integer</td><td> <span class="hint">default: <code>24</code></span></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-networks-captures-start">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/networks/captures/start</code>
+  </header>
+  <h2>Start Packet Capture</h2>
+  <p class="desc">Start packet capture on a network link.
+
+Requires tcpdump with CAP_NET_RAW capability:
+    sudo setcap cap_net_raw,cap_net_admin=eip $(which tcpdump)
+
+BPF filter examples:
+    - &quot;tcp port 80&quot; (HTTP traffic)
+    - &quot;icmp&quot; (ping packets)
+    - &quot;host 192.168.1.1&quot; (traffic to/from specific IP)
+    - &quot;&quot; (capture everything)</p>
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;link_id&quot;: &quot;string&quot;,
+  &quot;lab_id&quot;: &quot;string&quot;,
+  &quot;interface&quot;: &quot;string&quot;,
+  &quot;filter&quot;: null,
+  &quot;max_packets&quot;: null,
+  &quot;max_duration_sec&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">201</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-networks-captures-capture_id-download">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/networks/captures/{capture_id}/download</code>
+  </header>
+  <h2>Download Capture</h2>
+  <p class="desc">Download PCAP file for a capture.
+
+Can be opened in Wireshark, tcpdump, or tshark.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>capture_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-networks-captures-capture_id-stop">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/networks/captures/{capture_id}/stop</code>
+  </header>
+  <h2>Stop Packet Capture</h2>
+  <p class="desc">Stop an active packet capture.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>capture_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
 </article>
 <article class="endpoint" id="post-api-networks-links">
   <header>
@@ -519,6 +628,39 @@ For now, useful for testing.</p>
   &quot;style&quot;: null
 }</code></pre>
   <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-networks-network_id">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/networks/{network_id}</code>
+  </header>
+  <h2>Get Network</h2>
+  <p class="desc">Get details of a specific network.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>network_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="delete-api-networks-network_id">
+  <header>
+    <span class="badge" style="background:#ef4444">DEL</span>
+    <code class="path">/api/networks/{network_id}</code>
+  </header>
+  <h2>Delete Network</h2>
+  <p class="desc">Delete a network and clean up infrastructure.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>network_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">204</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-networks-network_id-health">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/networks/{network_id}/health</code>
+  </header>
+  <h2>Get Network Health</h2>
+  <p class="desc">Check health status of a NAT network.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>network_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
 </article></section><section class="tag-group"><h1 id="tag-templates">templates</h1>
 <article class="endpoint" id="get-api-templates">
   <header>
@@ -527,7 +669,7 @@ For now, useful for testing.</p>
   </header>
   <h2>List Templates</h2>
   
-  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>category</code></td><td>query</td><td>string</td><td></td></tr></tbody></table>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>category</code></td><td>query</td><td>—</td><td></td></tr></tbody></table>
   
   <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
 </article>
@@ -560,7 +702,7 @@ For now, useful for testing.</p>
   </header>
   <h2>Deploy Template</h2>
   
-  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>template_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>lab_name</code></td><td>query</td><td>string</td><td></td></tr></tbody></table>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>template_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>lab_name</code></td><td>query</td><td>—</td><td></td></tr></tbody></table>
   
   <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
 </article></section><section class="tag-group"><h1 id="tag-system">system</h1>
@@ -621,6 +763,34 @@ Idempotency rule: once `complete` is True we refuse — see module docstring.</p
   </header>
   <h2>System Info</h2>
   
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-system-permissions">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/system/permissions</code>
+  </header>
+  <h2>Check Image Permissions</h2>
+  <p class="desc">Check image directory permissions (CRE-53 enhancement).
+
+Verifies all images are readable/writable by the service user.
+EVE-NG requires manual &#x27;fixpermissions&#x27; after uploads - OmniLab auto-fixes!</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-system-permissions-fix">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/system/permissions/fix</code>
+  </header>
+  <h2>Fix Image Permissions</h2>
+  <p class="desc">Force fix all image permissions (admin only in production).
+
+Sets all images to 644 (rw-r--r--) with service user ownership.
+Unlike EVE-NG, this is rarely needed - upload API sets correct perms automatically.</p>
   
   
   <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
@@ -773,6 +943,636 @@ see it via System -&gt; Updates, but the corner badge stops nagging.</p>
   <h2>Console Info</h2>
   
   <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-agent">agent</h1>
+<article class="endpoint" id="post-api-agent-build">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/agent/build</code>
+  </header>
+  <h2>Build Lab</h2>
+  <p class="desc">Run the lab-builder agent for ``prompt`` and stream its events as SSE.
+
+Each event from ``agent_runner.run_build`` is serialized as one SSE frame
+(``data: {json}\n\n``). The runner enforces the CRE-40 cost rails and
+redacts the API key from any error it surfaces.
+
+CRE-47: a ``run_id`` is assigned and an agent_runs row is persisted at start
+(status=&#x27;running&#x27;). The run_id is emitted to the client via the runner&#x27;s
+early ``run_started`` event so the frontend knows what to /cancel. On the
+terminal event (done/cancelled/error) the row is updated with the final
+status, lab_id, tool_call_count and total_tokens.</p>
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;prompt&quot;: &quot;string&quot;,
+  &quot;model&quot;: null,
+  &quot;max_iterations&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-agent-build-run_id-cancel">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/agent/build/{run_id}/cancel</code>
+  </header>
+  <h2>Cancel Build</h2>
+  <p class="desc">Request graceful cancellation of an in-flight build.
+
+Sets the cancel flag in ``agent_runner``&#x27;s module-level registry; the
+(sync) build generator polls it between iterations/tool-calls and stops,
+tearing down any partially-built lab and emitting a terminal ``cancelled``
+event (which updates the agent_runs row). Idempotent: cancelling an unknown
+or already-finished run simply reports ``cancelled: false``.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>run_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-agent-runs">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/agent/runs</code>
+  </header>
+  <h2>List Runs</h2>
+  <p class="desc">Return the last 10 runs (most recent first) for the history UI.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-agent-test">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/agent/test</code>
+  </header>
+  <h2>Test Ai Provider</h2>
+  <p class="desc">Ping the configured provider. Returns {ok, latency_ms, model} on success
+or {ok: false, error} on failure. Never makes a real call in tests (the
+``_ping_provider`` seam is mocked). The api_key never appears in output.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-agent-tools">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/agent/tools</code>
+  </header>
+  <h2>List Tools</h2>
+  <p class="desc">Discovery endpoint — names the agent loop (CRE-44) can introspect.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-agent-tools-name">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/agent/tools/{name}</code>
+  </header>
+  <h2>Call Tool</h2>
+  <p class="desc">Dispatch a single tool by name. Returns the standard envelope.
+
+Unknown tool -&gt; VALIDATION error envelope (404-style, but kept in-envelope so the
+agent in CRE-44 sees a uniform shape). Tool-raised AILBError -&gt; error envelope.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>name</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;args&quot;: {}
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-auth">auth</h1>
+<article class="endpoint" id="post-api-auth-login">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/auth/login</code>
+  </header>
+  <h2>Login</h2>
+  <p class="desc">Login with username/password and receive JWT token.</p>
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;username&quot;: &quot;string&quot;,
+  &quot;password&quot;: &quot;string&quot;
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-auth-logout">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/auth/logout</code>
+  </header>
+  <h2>Logout</h2>
+  <p class="desc">Logout (client must delete token - stateless JWT).</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>authorization</code></td><td>header</td><td>—</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-auth-me">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/auth/me</code>
+  </header>
+  <h2>Get Current User Info</h2>
+  <p class="desc">Get current authenticated user&#x27;s info.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>authorization</code></td><td>header</td><td>—</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-auth-refresh">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/auth/refresh</code>
+  </header>
+  <h2>Refresh Token</h2>
+  <p class="desc">Refresh JWT token (extend expiry).</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>authorization</code></td><td>header</td><td>—</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-auth-register">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/auth/register</code>
+  </header>
+  <h2>Register User</h2>
+  <p class="desc">Register a new user (admin-only).
+
+First user (when no users exist) can self-register as admin.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>authorization</code></td><td>header</td><td>—</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;username&quot;: &quot;string&quot;,
+  &quot;email&quot;: &quot;string&quot;,
+  &quot;password&quot;: &quot;string&quot;,
+  &quot;role&quot;: &quot;string&quot;,
+  &quot;full_name&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">201</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-auth-users">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/auth/users/</code>
+  </header>
+  <h2>List Users</h2>
+  <p class="desc">List all users (admin-only).</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>authorization</code></td><td>header</td><td>—</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-auth-users-user_id">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/auth/users/{user_id}</code>
+  </header>
+  <h2>Get User</h2>
+  <p class="desc">Get user details.
+
+Users can view their own profile, admins can view anyone.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>user_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>authorization</code></td><td>header</td><td>—</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="put-api-auth-users-user_id">
+  <header>
+    <span class="badge" style="background:#8b5cf6">PUT</span>
+    <code class="path">/api/auth/users/{user_id}</code>
+  </header>
+  <h2>Update User</h2>
+  <p class="desc">Update user profile.
+
+Users can update their own email/full_name.
+Admins can update anyone&#x27;s role/email/full_name.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>user_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>authorization</code></td><td>header</td><td>—</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;email&quot;: null,
+  &quot;full_name&quot;: null,
+  &quot;role&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="delete-api-auth-users-user_id">
+  <header>
+    <span class="badge" style="background:#ef4444">DEL</span>
+    <code class="path">/api/auth/users/{user_id}</code>
+  </header>
+  <h2>Delete User</h2>
+  <p class="desc">Delete a user (admin-only).
+
+Cannot delete yourself (prevents lockout).</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>user_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>authorization</code></td><td>header</td><td>—</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">204</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="patch-api-auth-users-user_id-activate">
+  <header>
+    <span class="badge" style="background:#f59e0b">PATCH</span>
+    <code class="path">/api/auth/users/{user_id}/activate</code>
+  </header>
+  <h2>Toggle User Activation</h2>
+  <p class="desc">Activate or deactivate a user account (admin-only).
+
+Prevents user from logging in without deleting their data.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>user_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>is_active</code> <span class="req">required</span></td><td>query</td><td>boolean</td><td></td></tr><tr><td><code>authorization</code></td><td>header</td><td>—</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="patch-api-auth-users-user_id-password">
+  <header>
+    <span class="badge" style="background:#f59e0b">PATCH</span>
+    <code class="path">/api/auth/users/{user_id}/password</code>
+  </header>
+  <h2>Change Password</h2>
+  <p class="desc">Change user password.
+
+Users must provide current_password to change their own.
+Admins can reset anyone&#x27;s password without current_password.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>user_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>authorization</code></td><td>header</td><td>—</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;current_password&quot;: null,
+  &quot;new_password&quot;: &quot;string&quot;
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-misc">misc</h1>
+<article class="endpoint" id="get-labs-lab_id-nodes-node_id-web-path">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/labs/{lab_id}/nodes/{node_id}/web/{path}</code>
+  </header>
+  <h2>Web Proxy</h2>
+  <p class="desc">Proxy any HTTP method to the docker node&#x27;s web port.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>path</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-labs-lab_id-nodes-node_id-web-path">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/labs/{lab_id}/nodes/{node_id}/web/{path}</code>
+  </header>
+  <h2>Web Proxy</h2>
+  <p class="desc">Proxy any HTTP method to the docker node&#x27;s web port.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>path</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="put-labs-lab_id-nodes-node_id-web-path">
+  <header>
+    <span class="badge" style="background:#8b5cf6">PUT</span>
+    <code class="path">/labs/{lab_id}/nodes/{node_id}/web/{path}</code>
+  </header>
+  <h2>Web Proxy</h2>
+  <p class="desc">Proxy any HTTP method to the docker node&#x27;s web port.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>path</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="patch-labs-lab_id-nodes-node_id-web-path">
+  <header>
+    <span class="badge" style="background:#f59e0b">PATCH</span>
+    <code class="path">/labs/{lab_id}/nodes/{node_id}/web/{path}</code>
+  </header>
+  <h2>Web Proxy</h2>
+  <p class="desc">Proxy any HTTP method to the docker node&#x27;s web port.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>path</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="delete-labs-lab_id-nodes-node_id-web-path">
+  <header>
+    <span class="badge" style="background:#ef4444">DEL</span>
+    <code class="path">/labs/{lab_id}/nodes/{node_id}/web/{path}</code>
+  </header>
+  <h2>Web Proxy</h2>
+  <p class="desc">Proxy any HTTP method to the docker node&#x27;s web port.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>path</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="options-labs-lab_id-nodes-node_id-web-path">
+  <header>
+    <span class="badge" style="background:#6b7280">OPT</span>
+    <code class="path">/labs/{lab_id}/nodes/{node_id}/web/{path}</code>
+  </header>
+  <h2>Web Proxy</h2>
+  <p class="desc">Proxy any HTTP method to the docker node&#x27;s web port.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>path</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="head-labs-lab_id-nodes-node_id-web-path">
+  <header>
+    <span class="badge" style="background:#6b7280">HEAD</span>
+    <code class="path">/labs/{lab_id}/nodes/{node_id}/web/{path}</code>
+  </header>
+  <h2>Web Proxy</h2>
+  <p class="desc">Proxy any HTTP method to the docker node&#x27;s web port.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>node_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>path</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-settings">settings</h1>
+<article class="endpoint" id="get-api-settings-ai-provider">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/settings/ai-provider</code>
+  </header>
+  <h2>Get Ai Provider</h2>
+  <p class="desc">Return the stored AI-provider config WITHOUT the api_key.
+
+Fresh install with no key -&gt; ``api_key_set: false`` so the UI can treat the
+AI builder as disabled and prompt the operator to configure a provider.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-settings-ai-provider">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/settings/ai-provider</code>
+  </header>
+  <h2>Update Ai Provider</h2>
+  <p class="desc">Persist the AI-provider config. The api_key is encrypted at rest and is
+NEVER echoed back — the response is the same redacted shape as GET.</p>
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;provider&quot;: null,
+  &quot;api_key&quot;: null,
+  &quot;model&quot;: null,
+  &quot;base_url&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-template-library">template-library</h1>
+<article class="endpoint" id="get-api-template-library">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/template-library/</code>
+  </header>
+  <h2>List Templates</h2>
+  <p class="desc">List all templates with optional filtering.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>visible_only</code></td><td>query</td><td>boolean</td><td> <span class="hint">default: <code>false</code></span></td></tr><tr><td><code>category</code></td><td>query</td><td>—</td><td></td></tr><tr><td><code>type</code></td><td>query</td><td>—</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-template-library">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/template-library/</code>
+  </header>
+  <h2>Create Template</h2>
+  <p class="desc">Create a new template (user-uploaded images only, is_builtin=0).</p>
+  
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;name&quot;: &quot;string&quot;,
+  &quot;vendor&quot;: null,
+  &quot;category&quot;: &quot;string&quot;,
+  &quot;description&quot;: null,
+  &quot;type&quot;: &quot;string&quot;,
+  &quot;image&quot;: &quot;string&quot;,
+  &quot;cpu&quot;: 0,
+  &quot;ram&quot;: 0
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">201</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-template-library-categories">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/template-library/categories</code>
+  </header>
+  <h2>List Categories</h2>
+  <p class="desc">List all unique template categories.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-template-library-upload">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/template-library/upload</code>
+  </header>
+  <h2>Upload Image</h2>
+  <p class="desc">Upload a QEMU/KVM disk image (qcow2, vmdk, ova).
+
+Returns the file path to use in template creation.
+Supports chunked upload for large files (vendor images can be 1-10GB).</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>name</code></td><td>query</td><td>—</td><td></td></tr><tr><td><code>vendor</code></td><td>query</td><td>—</td><td></td></tr><tr><td><code>category</code></td><td>query</td><td>string</td><td> <span class="hint">default: <code>&quot;networking&quot;</code></span></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-template-library-vendors">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/template-library/vendors</code>
+  </header>
+  <h2>List Vendors</h2>
+  <p class="desc">List all unique vendors.</p>
+  
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-template-library-template_id">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/template-library/{template_id}</code>
+  </header>
+  <h2>Get Template</h2>
+  <p class="desc">Get template details by ID.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>template_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="put-api-template-library-template_id">
+  <header>
+    <span class="badge" style="background:#8b5cf6">PUT</span>
+    <code class="path">/api/template-library/{template_id}</code>
+  </header>
+  <h2>Update Template</h2>
+  <p class="desc">Update template metadata.
+
+Built-in templates (is_builtin=1) can only update visibility and icon.
+User templates can update everything.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>template_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;name&quot;: null,
+  &quot;vendor&quot;: null,
+  &quot;category&quot;: null,
+  &quot;description&quot;: null,
+  &quot;image&quot;: null,
+  &quot;cpu&quot;: null,
+  &quot;ram&quot;: null,
+  &quot;disk&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="delete-api-template-library-template_id">
+  <header>
+    <span class="badge" style="background:#ef4444">DEL</span>
+    <code class="path">/api/template-library/{template_id}</code>
+  </header>
+  <h2>Delete Template</h2>
+  <p class="desc">Delete a user template.
+
+Built-in templates (is_builtin=1) cannot be deleted.</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>template_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">204</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="patch-api-template-library-template_id-visibility">
+  <header>
+    <span class="badge" style="background:#f59e0b">PATCH</span>
+    <code class="path">/api/template-library/{template_id}/visibility</code>
+  </header>
+  <h2>Toggle Visibility</h2>
+  <p class="desc">Toggle template visibility (show/hide in UI).</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>template_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>visible</code> <span class="req">required</span></td><td>query</td><td>boolean</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-textobjects">textobjects</h1>
+<article class="endpoint" id="get-api-labs-lab_id-textobjects">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/labs/{lab_id}/textobjects</code>
+  </header>
+  <h2>List Textobjects</h2>
+  <p class="desc">List all text objects (shapes + text annotations) for a lab</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-labs-lab_id-textobjects">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/labs/{lab_id}/textobjects</code>
+  </header>
+  <h2>Create Textobject</h2>
+  <p class="desc">Create a new text object (shape or annotation)</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;type&quot;: &quot;string&quot;,
+  &quot;x&quot;: 0.0,
+  &quot;y&quot;: 0.0,
+  &quot;width&quot;: null,
+  &quot;height&quot;: null,
+  &quot;fill&quot;: &quot;string&quot;,
+  &quot;stroke&quot;: &quot;string&quot;,
+  &quot;text&quot;: &quot;string&quot;
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-labs-lab_id-textobjects-obj_id">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/labs/{lab_id}/textobjects/{obj_id}</code>
+  </header>
+  <h2>Get Textobject</h2>
+  <p class="desc">Get a single text object</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>obj_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="patch-api-labs-lab_id-textobjects-obj_id">
+  <header>
+    <span class="badge" style="background:#f59e0b">PATCH</span>
+    <code class="path">/api/labs/{lab_id}/textobjects/{obj_id}</code>
+  </header>
+  <h2>Update Textobject</h2>
+  <p class="desc">Update a text object</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>obj_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;type&quot;: null,
+  &quot;x&quot;: null,
+  &quot;y&quot;: null,
+  &quot;width&quot;: null,
+  &quot;height&quot;: null,
+  &quot;fill&quot;: null,
+  &quot;stroke&quot;: null,
+  &quot;text&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="delete-api-labs-lab_id-textobjects-obj_id">
+  <header>
+    <span class="badge" style="background:#ef4444">DEL</span>
+    <code class="path">/api/labs/{lab_id}/textobjects/{obj_id}</code>
+  </header>
+  <h2>Delete Textobject</h2>
+  <p class="desc">Delete a text object</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>obj_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article></section><section class="tag-group"><h1 id="tag-traffic-filters">traffic-filters</h1>
+<article class="endpoint" id="get-api-labs-lab_id-filters">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/labs/{lab_id}/filters</code>
+  </header>
+  <h2>List Filters</h2>
+  <p class="desc">List all traffic filters for a lab</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-labs-lab_id-filters">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/labs/{lab_id}/filters</code>
+  </header>
+  <h2>Create Filter</h2>
+  <p class="desc">Create a new traffic filter</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;title&quot;: &quot;string&quot;,
+  &quot;expr&quot;: &quot;string&quot;,
+  &quot;color&quot;: &quot;string&quot;,
+  &quot;timeout&quot;: 0,
+  &quot;enabled&quot;: true,
+  &quot;priority&quot;: 0
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="get-api-labs-lab_id-filters-filter_id">
+  <header>
+    <span class="badge" style="background:#3b82f6">GET</span>
+    <code class="path">/api/labs/{lab_id}/filters/{filter_id}</code>
+  </header>
+  <h2>Get Filter</h2>
+  <p class="desc">Get a single traffic filter</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>filter_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="patch-api-labs-lab_id-filters-filter_id">
+  <header>
+    <span class="badge" style="background:#f59e0b">PATCH</span>
+    <code class="path">/api/labs/{lab_id}/filters/{filter_id}</code>
+  </header>
+  <h2>Update Filter</h2>
+  <p class="desc">Update a traffic filter</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>filter_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  <h4>Request body <span class="req">required</span></h4><pre class="example"><code>{
+  &quot;title&quot;: null,
+  &quot;expr&quot;: null,
+  &quot;color&quot;: null,
+  &quot;timeout&quot;: null,
+  &quot;enabled&quot;: null,
+  &quot;priority&quot;: null
+}</code></pre>
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="delete-api-labs-lab_id-filters-filter_id">
+  <header>
+    <span class="badge" style="background:#ef4444">DEL</span>
+    <code class="path">/api/labs/{lab_id}/filters/{filter_id}</code>
+  </header>
+  <h2>Delete Filter</h2>
+  <p class="desc">Delete a traffic filter</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>filter_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
+  
+  <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
+</article>
+<article class="endpoint" id="post-api-labs-lab_id-filters-filter_id-toggle">
+  <header>
+    <span class="badge" style="background:#10b981">POST</span>
+    <code class="path">/api/labs/{lab_id}/filters/{filter_id}/toggle</code>
+  </header>
+  <h2>Toggle Filter</h2>
+  <p class="desc">Toggle a filter&#x27;s enabled state</p>
+  <table class="params"><thead><tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>lab_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr><tr><td><code>filter_id</code> <span class="req">required</span></td><td>path</td><td>string</td><td></td></tr></tbody></table>
   
   <h4>Responses</h4><table class="params"><tbody><tr><td><span class="status-code" style="color:#10b981">200</span></td><td>Successful Response</td></tr><tr><td><span class="status-code" style="color:#ef4444">422</span></td><td>Validation Error</td></tr></tbody></table>
 </article></section>

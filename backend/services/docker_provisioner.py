@@ -40,7 +40,7 @@ class DockerProvisionerError(RuntimeError):
 
 class DiskFullError(DockerProvisionerError):
     """Raised when an operation fails due to ENOSPC (errno 28).
-    
+
     Surfaced separately so calling code can present actionable guidance:
     - Run `docker system prune` to free image layers
     - Run `omnilab gc --apply` to delete orphaned labs
@@ -50,7 +50,7 @@ class DiskFullError(DockerProvisionerError):
 
 def _is_disk_full_error(exc: Exception) -> bool:
     """Detect ENOSPC (errno 28) in Docker APIError or OSError chains.
-    
+
     Docker SDK wraps OS-level ENOSPC in APIError with the text buried in
     .explanation or str(exc). We check both errno attribute and string
     matching to catch all variants.
@@ -58,13 +58,13 @@ def _is_disk_full_error(exc: Exception) -> bool:
     # Direct OSError with errno 28
     if isinstance(exc, OSError) and exc.errno == errno.ENOSPC:
         return True
-    
+
     # Docker APIError wrapping ENOSPC
     if hasattr(exc, "explanation"):
         explanation = str(exc.explanation).lower()
         if "no space left" in explanation or "enospc" in explanation:
             return True
-    
+
     # Fallback: scan the full exception string
     exc_str = str(exc).lower()
     return "no space left" in exc_str or "enospc" in exc_str or "errno 28" in exc_str

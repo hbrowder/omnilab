@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<lab name="Master BGP in Depth- Cisco Routers - Sikandar Shaik CCIEx3 " id="2168cb05-4bb1-43d9-bb16-e6cfff708b9a" version="0" scripttimeout="600" countdown="0" linkwidth="1" lock="0" grid="1" sat="-1">
+  <description>https://www.youtube.com/watch?v=G0qDnqOKwOE&amp;list=PLJqb_j53o7BiVPaFGQxEHhGx-ximMukwH&amp;index=1
+
+Master BGP in Depth- CIsco Routers
+In this video, Sikandar Shaik breaks down the fundamentals of Border Gateway Protocol (BGP)—the backbone of the internet. Whether you're a beginner or an experienced network engineer, this session will help you grasp the essential concepts of BGP, its working principles, and how it manages routing between autonomous systems (AS).
+</description>
+  <topology>
+    <nodes>
+      <node id="5" name="R1" type="iol" template="iol" image="x86_64_crb_linux-adventerprisek9-ms.bin" ethernet="1" nvram="2048" ram="2028" serial="0" keepalive="1" delay="0" sat="-1" icon="Router-3D-Gen1-S.svg" width="0" config="0" left="112" top="365">
+        <interface id="0" name="e0/0" type="ethernet" network_id="8" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+        <interface id="16" name="e0/1" type="ethernet" network_id="3" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+        <interface id="32" name="e0/2" type="ethernet" network_id="2" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+      </node>
+      <node id="6" name="R4" type="iol" template="iol" image="x86_64_crb_linux-adventerprisek9-ms.bin" ethernet="1" nvram="2048" ram="2028" serial="0" keepalive="1" delay="0" sat="-1" icon="Router-3D-Gen1-S.svg" width="0" config="0" left="308" top="483">
+        <interface id="0" name="e0/0" type="ethernet" network_id="7" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+        <interface id="16" name="e0/1" type="ethernet" network_id="3" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+        <interface id="32" name="e0/2" type="ethernet" network_id="4" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+      </node>
+      <node id="7" name="R3" type="iol" template="iol" image="x86_64_crb_linux-adventerprisek9-ms.bin" ethernet="1" nvram="2048" ram="2028" serial="0" keepalive="1" delay="0" sat="-1" icon="Router-3D-Gen1-S.svg" width="0" config="0" left="539" top="366">
+        <interface id="0" name="e0/0" type="ethernet" network_id="6" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+        <interface id="16" name="e0/1" type="ethernet" network_id="1" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+        <interface id="32" name="e0/2" type="ethernet" network_id="4" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+      </node>
+      <node id="8" name="R2" type="iol" template="iol" image="x86_64_crb_linux-adventerprisek9-ms.bin" ethernet="1" nvram="2048" ram="2028" serial="0" keepalive="1" delay="0" sat="-1" icon="Router-3D-Gen1-S.svg" width="0" config="0" left="332" top="244">
+        <interface id="0" name="e0/0" type="ethernet" network_id="5" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+        <interface id="16" name="e0/1" type="ethernet" network_id="1" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+        <interface id="32" name="e0/2" type="ethernet" network_id="2" vid="1" labelpos="0.5" stub="0" width="1" curviness="10" beziercurviness="150" round="0" midpoint="0.5" srcpos="0.15" dstpos="0.85"/>
+      </node>
+      <node id="1" name="vIOS" type="qemu" template="vios" image="vios-adventerprisek9-m.SPA.154-3M8" console="telnet" cpu="1" cpulimit="1" ram="1024" ethernet="4" uuid="17a8e068-5899-4ec0-a64e-74712ea30583" firstmac="50:00:00:01:00:00" qemu_options="-machine type=pc,accel=kvm -serial mon:stdio -nographic -no-user-config -nodefaults -rtc base=utc -cpu host" qemu_version="2.4.0" qemu_arch="x86_64" delay="0" sat="-1" icon="Router-3D-Gen1-S.svg" width="0" config="0" left="1676" top="392"/>
+    </nodes>
+    <networks>
+      <network id="1" smart="0" vlan8021ad="0" type="bridge" name="Net-R2iface16" left="0" top="0" style="Solid" linkstyle="Straight" color="" label="" visibility="0" icon="lan.png" width="0"/>
+      <network id="2" smart="0" vlan8021ad="0" type="bridge" name="Net-R2iface32" left="0" top="0" style="Solid" linkstyle="Straight" color="" label="" visibility="0" icon="lan.png" width="0"/>
+      <network id="3" smart="0" vlan8021ad="0" type="bridge" name="Net-R4iface16" left="0" top="0" style="Solid" linkstyle="Straight" color="" label="" visibility="0" icon="lan.png" width="0"/>
+      <network id="4" smart="0" vlan8021ad="0" type="bridge" name="Net-R3iface32" left="0" top="0" style="Solid" linkstyle="Straight" color="" label="" visibility="0" icon="lan.png" width="0"/>
+      <network id="5" smart="-1" vlan8021ad="-1" type="private" name="Net-20.1.1.1" left="493" top="266" style="Solid" linkstyle="Straight" color="" label="" visibility="1" icon="lan.png" width="0"/>
+      <network id="6" smart="-1" vlan8021ad="-1" type="private2" name="Net-30.1.1" left="608" top="388" style="Solid" linkstyle="Straight" color="" label="" visibility="1" icon="lan.png" width="0"/>
+      <network id="7" smart="-1" vlan8021ad="-1" type="private3" name="Net-40.1.1" left="455" top="633" style="Solid" linkstyle="Straight" color="" label="" visibility="1" icon="lan.png" width="0"/>
+      <network id="8" smart="-1" vlan8021ad="-1" type="private" name="Net-10.1.1" left="113" top="403" style="Solid" linkstyle="Straight" color="" label="" visibility="1" icon="lan.png" width="0"/>
+    </networks>
+  </topology>
+  <objects>
+    <textobjects>
+      <textobject id="1" name="New Text" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVRleHQxIiBjbGFzcz0iY3VzdG9tVGV4dCBjdXN0b21TaGFwZSBjb250ZXh0LW1lbnUgY2sgY2stY29udGVudCByZXNpemFibGUtY29udGVudCIgbmFtZT0iTmV3IFRleHQiIHN0eWxlPSJ6LWluZGV4OiA5OTk7IGN1cnNvcjogbW92ZTsgZGlzcGxheTogYmxvY2s7IHdpZHRoOiBhdXRvOyBoZWlnaHQ6IGF1dG87IHZpc2liaWxpdHk6IHZpc2libGU7IHBvc2l0aW9uOiBhYnNvbHV0ZTsgbGVmdDogMjk5cHg7IHRvcDogOTNweDsiIGRhdGEtanRrLW1hbmFnZWQ9ImN1c3RvbVRleHQxIj48cD5MT09QQkFDS1M8L3A+PHA+MTIuMC4wLjEvMjQ8L3A+PHA+MTIuMC4xLjEvMjQ8L3A+PHA+MTIuMC4yLjEvMjQ8L3A+PHA+MTIuMC4zLjEvMjQ8L3A+PC9kaXY+</data>
+      </textobject>
+      <textobject id="2" name="New Text_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMiIgY2xhc3M9ImN1c3RvbVRleHQgY3VzdG9tU2hhcGUgY29udGV4dC1tZW51IGNrIGNrLWNvbnRlbnQgcmVzaXphYmxlLWNvbnRlbnQiIG5hbWU9Ik5ldyBUZXh0X2NvcHkiIHN0eWxlPSJ6LWluZGV4OiA5OTk7IGN1cnNvcjogbW92ZTsgZGlzcGxheTogYmxvY2s7IHdpZHRoOiBhdXRvOyBoZWlnaHQ6IGF1dG87IHZpc2liaWxpdHk6IHZpc2libGU7IHBvc2l0aW9uOiBhYnNvbHV0ZTsgbGVmdDogNTIycHg7IHRvcDogNDI0cHg7IiBkYXRhLWp0ay1tYW5hZ2VkPSJjdXN0b21TaGFwZTIiPjxwPkxPT1BCQUNLUzwvcD48cD4xMy4wLjAuMS8yNDwvcD48cD4xMy4wLjEuMS8yNDwvcD48cD4xMy4wLjIuMS8yNDwvcD48cD4xMy4wLjMuMS8yNDwvcD48L2Rpdj4=</data>
+      </textobject>
+      <textobject id="3" name="New Text_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMyIgY2xhc3M9ImN1c3RvbVRleHQgY3VzdG9tU2hhcGUgY29udGV4dC1tZW51IGNrIGNrLWNvbnRlbnQgcmVzaXphYmxlLWNvbnRlbnQiIG5hbWU9Ik5ldyBUZXh0X2NvcHlfY29weSIgc3R5bGU9InotaW5kZXg6IDk5OTsgY3Vyc29yOiBtb3ZlOyBkaXNwbGF5OiBibG9jazsgd2lkdGg6IGF1dG87IGhlaWdodDogYXV0bzsgdmlzaWJpbGl0eTogdmlzaWJsZTsgcG9zaXRpb246IGFic29sdXRlOyBsZWZ0OiAzNDVweDsgdG9wOiA2MTlweDsiIGRhdGEtanRrLW1hbmFnZWQ9ImN1c3RvbVNoYXBlMyI+PHA+TE9PUEJBQ0tTPC9wPjxwPjE0LjAuMC4xLzI0PC9wPjxwPjE0LjAuMS4xLzI0PC9wPjxwPjE0LjAuMi4xLzI0PC9wPjxwPjE0LjAuMy4xLzI0PC9wPjwvZGl2Pg==</data>
+      </textobject>
+      <textobject id="4" name="New Text_copy_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlNCIgY2xhc3M9ImN1c3RvbVRleHQgY3VzdG9tU2hhcGUgY29udGV4dC1tZW51IGNrIGNrLWNvbnRlbnQgcmVzaXphYmxlLWNvbnRlbnQiIG5hbWU9Ik5ldyBUZXh0X2NvcHlfY29weV9jb3B5IiBzdHlsZT0iei1pbmRleDogOTk5OyBjdXJzb3I6IG1vdmU7IGRpc3BsYXk6IGJsb2NrOyB3aWR0aDogYXV0bzsgaGVpZ2h0OiBhdXRvOyB2aXNpYmlsaXR5OiB2aXNpYmxlOyBwb3NpdGlvbjogYWJzb2x1dGU7IGxlZnQ6IDVweDsgdG9wOiAyMDdweDsiIGRhdGEtanRrLW1hbmFnZWQ9ImN1c3RvbVNoYXBlNCI+PHA+TE9PUEJBQ0tTPC9wPjxwPjExLjAuMC4xLzI0PC9wPjxwPjExLjAuMS4xLzI0PC9wPjxwPjExLjAuMi4xLzI0PC9wPjxwPjExLjAuMy4xLzI0PC9wPjwvZGl2Pg==</data>
+      </textobject>
+      <textobject id="5" name="New Text" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVRleHQ1IiBjbGFzcz0iY3VzdG9tVGV4dCBjdXN0b21TaGFwZSBjb250ZXh0LW1lbnUgY2sgY2stY29udGVudCByZXNpemFibGUtY29udGVudCIgbmFtZT0iTmV3IFRleHQiIHN0eWxlPSJ6LWluZGV4OiA5OTk7IGN1cnNvcjogbW92ZTsgZGlzcGxheTogYmxvY2s7IHdpZHRoOiBhdXRvOyBoZWlnaHQ6IGF1dG87IHZpc2liaWxpdHk6IHZpc2libGU7IHBvc2l0aW9uOiBhYnNvbHV0ZTsgbGVmdDogMTc2cHg7IHRvcDogMzMycHg7IiBkYXRhLWp0ay1tYW5hZ2VkPSJjdXN0b21UZXh0NSI+PHA+MS4xLjEuMS84PC9wPjwvZGl2Pg==</data>
+      </textobject>
+      <textobject id="6" name="New Text_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlNiIgY2xhc3M9ImN1c3RvbVRleHQgY3VzdG9tU2hhcGUgY29udGV4dC1tZW51IGNrIGNrLWNvbnRlbnQgcmVzaXphYmxlLWNvbnRlbnQiIG5hbWU9Ik5ldyBUZXh0X2NvcHkiIHN0eWxlPSJ6LWluZGV4OiA5OTk7IGN1cnNvcjogbW92ZTsgZGlzcGxheTogYmxvY2s7IHdpZHRoOiBhdXRvOyBoZWlnaHQ6IGF1dG87IHZpc2liaWxpdHk6IHZpc2libGU7IHBvc2l0aW9uOiBhYnNvbHV0ZTsgbGVmdDogMjI5cHg7IHRvcDogMjY2cHg7IiBkYXRhLWp0ay1tYW5hZ2VkPSJjdXN0b21TaGFwZTYiPjxwPjEuMS4xLjIvODwvcD48L2Rpdj4=</data>
+      </textobject>
+      <textobject id="7" name="New Text_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlNyIgY2xhc3M9ImN1c3RvbVRleHQgY3VzdG9tU2hhcGUgY29udGV4dC1tZW51IGNrIGNrLWNvbnRlbnQgcmVzaXphYmxlLWNvbnRlbnQiIG5hbWU9Ik5ldyBUZXh0X2NvcHlfY29weSIgc3R5bGU9InotaW5kZXg6IDk5OTsgY3Vyc29yOiBtb3ZlOyBkaXNwbGF5OiBibG9jazsgd2lkdGg6IGF1dG87IGhlaWdodDogYXV0bzsgdmlzaWJpbGl0eTogdmlzaWJsZTsgcG9zaXRpb246IGFic29sdXRlOyBsZWZ0OiA0NDNweDsgdG9wOiAyNjNweDsiIGRhdGEtanRrLW1hbmFnZWQ9ImN1c3RvbVNoYXBlNyI+PHA+Mi4yLjIuMS84PC9wPjwvZGl2Pg==</data>
+      </textobject>
+      <textobject id="8" name="New Text_copy_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlOCIgY2xhc3M9ImN1c3RvbVRleHQgY3VzdG9tU2hhcGUgY29udGV4dC1tZW51IGNrIGNrLWNvbnRlbnQgcmVzaXphYmxlLWNvbnRlbnQiIG5hbWU9Ik5ldyBUZXh0X2NvcHlfY29weV9jb3B5IiBzdHlsZT0iei1pbmRleDogOTk5OyBjdXJzb3I6IG1vdmU7IGRpc3BsYXk6IGJsb2NrOyB3aWR0aDogYXV0bzsgaGVpZ2h0OiBhdXRvOyB2aXNpYmlsaXR5OiB2aXNpYmxlOyBwb3NpdGlvbjogYWJzb2x1dGU7IGxlZnQ6IDUzMHB4OyB0b3A6IDM0NnB4OyIgZGF0YS1qdGstbWFuYWdlZD0iY3VzdG9tU2hhcGU4Ij48cD4yLjIuMi4yLzg8L3A+PC9kaXY+</data>
+      </textobject>
+      <textobject id="9" name="New Text_copy_copy_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlOSIgY2xhc3M9ImN1c3RvbVRleHQgY3VzdG9tU2hhcGUgY29udGV4dC1tZW51IGNrIGNrLWNvbnRlbnQgcmVzaXphYmxlLWNvbnRlbnQiIG5hbWU9Ik5ldyBUZXh0X2NvcHlfY29weV9jb3B5X2NvcHkiIHN0eWxlPSJ6LWluZGV4OiA5OTk7IGN1cnNvcjogbW92ZTsgZGlzcGxheTogYmxvY2s7IHdpZHRoOiBhdXRvOyBoZWlnaHQ6IGF1dG87IHZpc2liaWxpdHk6IHZpc2libGU7IHBvc2l0aW9uOiBhYnNvbHV0ZTsgbGVmdDogNDE0cHg7IHRvcDogNDg0cHg7IiBkYXRhLWp0ay1tYW5hZ2VkPSJjdXN0b21TaGFwZTkiPjxwPjMuMy4zLjIvODwvcD48L2Rpdj4=</data>
+      </textobject>
+      <textobject id="10" name="New Text_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMTAiIGNsYXNzPSJjdXN0b21UZXh0IGN1c3RvbVNoYXBlIGNvbnRleHQtbWVudSBjayBjay1jb250ZW50IHJlc2l6YWJsZS1jb250ZW50IiBuYW1lPSJOZXcgVGV4dF9jb3B5IiBzdHlsZT0iei1pbmRleDogOTk5OyBjdXJzb3I6IG1vdmU7IGRpc3BsYXk6IGJsb2NrOyB3aWR0aDogYXV0bzsgaGVpZ2h0OiBhdXRvOyB2aXNpYmlsaXR5OiB2aXNpYmxlOyBwb3NpdGlvbjogYWJzb2x1dGU7IGxlZnQ6IDI4NXB4OyB0b3A6IDQ0NnB4OyIgZGF0YS1qdGstbWFuYWdlZD0iY3VzdG9tU2hhcGUxMCI+PHA+NC40LjQuMS84PC9wPjwvZGl2Pg==</data>
+      </textobject>
+      <textobject id="11" name="New Text_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMTEiIGNsYXNzPSJjdXN0b21UZXh0IGN1c3RvbVNoYXBlIGNvbnRleHQtbWVudSBjayBjay1jb250ZW50IHJlc2l6YWJsZS1jb250ZW50IiBuYW1lPSJOZXcgVGV4dF9jb3B5X2NvcHkiIHN0eWxlPSJ6LWluZGV4OiA5OTk7IGN1cnNvcjogbW92ZTsgZGlzcGxheTogYmxvY2s7IHdpZHRoOiBhdXRvOyBoZWlnaHQ6IGF1dG87IHZpc2liaWxpdHk6IHZpc2libGU7IHBvc2l0aW9uOiBhYnNvbHV0ZTsgbGVmdDogMTkxcHg7IHRvcDogMzg3cHg7IiBkYXRhLWp0ay1tYW5hZ2VkPSJjdXN0b21TaGFwZTExIj48cD40LjQuNC4yLzg8L3A+PC9kaXY+</data>
+      </textobject>
+      <textobject id="12" name="New Text_copy_copy_copy_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMTIiIGNsYXNzPSJjdXN0b21UZXh0IGN1c3RvbVNoYXBlIGNvbnRleHQtbWVudSBjayBjay1jb250ZW50IHJlc2l6YWJsZS1jb250ZW50IiBuYW1lPSJOZXcgVGV4dF9jb3B5X2NvcHlfY29weV9jb3B5X2NvcHkiIHN0eWxlPSJ6LWluZGV4OiA5OTk7IGN1cnNvcjogbW92ZTsgZGlzcGxheTogYmxvY2s7IHdpZHRoOiBhdXRvOyBoZWlnaHQ6IGF1dG87IHZpc2liaWxpdHk6IHZpc2libGU7IHBvc2l0aW9uOiBhYnNvbHV0ZTsgbGVmdDogNDI3cHg7IHRvcDogNDE3cHg7IiBkYXRhLWp0ay1tYW5hZ2VkPSJjdXN0b21TaGFwZTEyIj48cD4zLjMuMy4xLzg8L3A+PC9kaXY+</data>
+      </textobject>
+      <textobject id="13" name="New Text_copy_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMTMiIGNsYXNzPSJjdXN0b21UZXh0IGN1c3RvbVNoYXBlIGNvbnRleHQtbWVudSBjayBjay1jb250ZW50IHJlc2l6YWJsZS1jb250ZW50IiBuYW1lPSJOZXcgVGV4dF9jb3B5X2NvcHlfY29weSIgc3R5bGU9InotaW5kZXg6IDk5OTsgY3Vyc29yOiBtb3ZlOyBkaXNwbGF5OiBibG9jazsgd2lkdGg6IGF1dG87IGhlaWdodDogYXV0bzsgdmlzaWJpbGl0eTogdmlzaWJsZTsgcG9zaXRpb246IGFic29sdXRlOyBsZWZ0OiA0M3B4OyB0b3A6IDM3NXB4OyIgZGF0YS1qdGstbWFuYWdlZD0iY3VzdG9tU2hhcGUxMyI+PHA+RTAvMDwvcD48cD4xMC4xLjEuMS84PC9wPjwvZGl2Pg==</data>
+      </textobject>
+      <textobject id="14" name="New Text_copy_copy_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMTQiIGNsYXNzPSJjdXN0b21UZXh0IGN1c3RvbVNoYXBlIGNvbnRleHQtbWVudSBjayBjay1jb250ZW50IHJlc2l6YWJsZS1jb250ZW50IiBuYW1lPSJOZXcgVGV4dF9jb3B5X2NvcHlfY29weV9jb3B5IiBzdHlsZT0iei1pbmRleDogOTk5OyBjdXJzb3I6IG1vdmU7IGRpc3BsYXk6IGJsb2NrOyB3aWR0aDogYXV0bzsgaGVpZ2h0OiBhdXRvOyB2aXNpYmlsaXR5OiB2aXNpYmxlOyBwb3NpdGlvbjogYWJzb2x1dGU7IGxlZnQ6IDMwN3B4OyB0b3A6IDU0OHB4OyIgZGF0YS1qdGstbWFuYWdlZD0iY3VzdG9tU2hhcGUxNCI+PHA+RTAvMDwvcD48cD40MC4xLjEuMS84PC9wPjwvZGl2Pg==</data>
+      </textobject>
+      <textobject id="15" name="New Text_copy_copy_copy_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMTUiIGNsYXNzPSJjdXN0b21UZXh0IGN1c3RvbVNoYXBlIGNvbnRleHQtbWVudSBjayBjay1jb250ZW50IHJlc2l6YWJsZS1jb250ZW50IiBuYW1lPSJOZXcgVGV4dF9jb3B5X2NvcHlfY29weV9jb3B5X2NvcHkiIHN0eWxlPSJ6LWluZGV4OiA5OTk7IGN1cnNvcjogbW92ZTsgZGlzcGxheTogYmxvY2s7IHdpZHRoOiBhdXRvOyBoZWlnaHQ6IGF1dG87IHZpc2liaWxpdHk6IHZpc2libGU7IHBvc2l0aW9uOiBhYnNvbHV0ZTsgbGVmdDogNDUycHg7IHRvcDogMzYzcHg7IiBkYXRhLWp0ay1tYW5hZ2VkPSJjdXN0b21TaGFwZTE1Ij48cD5FMC8wPC9wPjxwPjMwLjEuMS4xLzg8L3A+PC9kaXY+</data>
+      </textobject>
+      <textobject id="16" name="New Text_copy_copy_copy_copy_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMTYiIGNsYXNzPSJjdXN0b21UZXh0IGN1c3RvbVNoYXBlIGNvbnRleHQtbWVudSBjayBjay1jb250ZW50IHJlc2l6YWJsZS1jb250ZW50IiBuYW1lPSJOZXcgVGV4dF9jb3B5X2NvcHlfY29weV9jb3B5X2NvcHlfY29weSIgc3R5bGU9InotaW5kZXg6IDk5OTsgY3Vyc29yOiBtb3ZlOyBkaXNwbGF5OiBibG9jazsgd2lkdGg6IGF1dG87IGhlaWdodDogYXV0bzsgdmlzaWJpbGl0eTogdmlzaWJsZTsgcG9zaXRpb246IGFic29sdXRlOyBsZWZ0OiAzMjNweDsgdG9wOiAyOTdweDsiIGRhdGEtanRrLW1hbmFnZWQ9ImN1c3RvbVNoYXBlMTYiPjxwPkUwLzA8L3A+PHA+MjAuMS4xLjEvODwvcD48L2Rpdj4=</data>
+      </textobject>
+      <textobject id="17" name="New Text" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVRleHQxNyIgY2xhc3M9ImN1c3RvbVRleHQgY3VzdG9tU2hhcGUgY29udGV4dC1tZW51IGNrIGNrLWNvbnRlbnQgcmVzaXphYmxlLWNvbnRlbnQiIG5hbWU9Ik5ldyBUZXh0IiBzdHlsZT0iei1pbmRleDogOTk5OyBjdXJzb3I6IG1vdmU7IGRpc3BsYXk6IGJsb2NrOyB3aWR0aDogYXV0bzsgaGVpZ2h0OiBhdXRvOyB2aXNpYmlsaXR5OiB2aXNpYmxlOyBwb3NpdGlvbjogYWJzb2x1dGU7IGxlZnQ6IDQ2OXB4OyB0b3A6IDMwNXB4OyIgZGF0YS1qdGstbWFuYWdlZD0iY3VzdG9tVGV4dDE3Ij48cD5BUyA2MDA8L3A+PC9kaXY+</data>
+      </textobject>
+      <textobject id="18" name="New Text_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMTgiIGNsYXNzPSJjdXN0b21UZXh0IGN1c3RvbVNoYXBlIGNvbnRleHQtbWVudSBjayBjay1jb250ZW50IHJlc2l6YWJsZS1jb250ZW50IiBuYW1lPSJOZXcgVGV4dF9jb3B5IiBzdHlsZT0iei1pbmRleDogOTk5OyBjdXJzb3I6IG1vdmU7IGRpc3BsYXk6IGJsb2NrOyB3aWR0aDogYXV0bzsgaGVpZ2h0OiBhdXRvOyB2aXNpYmlsaXR5OiB2aXNpYmxlOyBwb3NpdGlvbjogYWJzb2x1dGU7IGxlZnQ6IDYycHg7IHRvcDogNDM5cHg7IiBkYXRhLWp0ay1tYW5hZ2VkPSJjdXN0b21TaGFwZTE4Ij48cD5BUyA1MDA8L3A+PC9kaXY+</data>
+      </textobject>
+      <textobject id="19" name="New Text_copy_copy" type="text">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMTkiIGNsYXNzPSJjdXN0b21UZXh0IGN1c3RvbVNoYXBlIGNvbnRleHQtbWVudSBjayBjay1jb250ZW50IHJlc2l6YWJsZS1jb250ZW50IiBuYW1lPSJOZXcgVGV4dF9jb3B5X2NvcHkiIHN0eWxlPSJ6LWluZGV4OiA5OTk7IGN1cnNvcjogbW92ZTsgZGlzcGxheTogYmxvY2s7IHdpZHRoOiBhdXRvOyBoZWlnaHQ6IGF1dG87IHZpc2liaWxpdHk6IHZpc2libGU7IHBvc2l0aW9uOiBhYnNvbHV0ZTsgbGVmdDogMzg0cHg7IHRvcDogNTU0cHg7IiBkYXRhLWp0ay1tYW5hZ2VkPSJjdXN0b21TaGFwZTE5Ij48cD5BUyA3MDA8L3A+PC9kaXY+</data>
+      </textobject>
+      <textobject id="20" name="circle20" type="circle">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMjAiIGNsYXNzPSJjdXN0b21TaGFwZSBjb250ZXh0LW1lbnUgcmVzaXphYmxlLWNvbnRlbnQiIG5hbWU9ImNpcmNsZTIwIiBzdHlsZT0iZGlzcGxheTogaW5saW5lOyB6LWluZGV4OiA5OTg7IHdpZHRoOiAzNTFweDsgaGVpZ2h0OiAxNzhweDsgdmlzaWJpbGl0eTogdmlzaWJsZTsgcG9zaXRpb246IGFic29sdXRlOyBsZWZ0OiAzMTlweDsgdG9wOiAyMzdweDsiIGRhdGEtanRrLW1hbmFnZWQ9ImN1c3RvbVNoYXBlMjAiPgogICAgICAgIDxzdmcgd2lkdGg9IjM1MXB4IiBoZWlnaHQ9IjE3OHB4Ij4KICAgICAgICAgIDxlbGxpcHNlIGN4PSIxNzUuNXB4IiBjeT0iODlweCIgcng9IjE3NXB4IiByeT0iODguNXB4IiBzdHJva2U9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMC41IiBmaWxsPSIjRkZGRkZGIj48L2VsbGlwc2U+CiAgICAgICAgPC9zdmc+CiAgICAgIDwvZGl2Pg==</data>
+      </textobject>
+      <textobject id="21" name="circle21" type="circle">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMjEiIGNsYXNzPSJjdXN0b21TaGFwZSBjb250ZXh0LW1lbnUgcmVzaXphYmxlLWNvbnRlbnQiIG5hbWU9ImNpcmNsZTIxIiBzdHlsZT0iZGlzcGxheTogaW5saW5lOyB6LWluZGV4OiA5OTk7IHdpZHRoOiAxNzBweDsgaGVpZ2h0OiAxOTBweDsgdmlzaWJpbGl0eTogdmlzaWJsZTsgcG9zaXRpb246IGFic29sdXRlOyBsZWZ0OiAzN3B4OyB0b3A6IDMxN3B4OyIgZGF0YS1qdGstbWFuYWdlZD0iY3VzdG9tU2hhcGUyMSI+CiAgICAgICAgPHN2ZyB3aWR0aD0iMTcwcHgiIGhlaWdodD0iMTkwcHgiPgogICAgICAgICAgPGVsbGlwc2UgY3g9Ijg1cHgiIGN5PSI5NXB4IiByeD0iODQuNXB4IiByeT0iOTQuNXB4IiBzdHJva2U9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMC41IiBmaWxsPSIjRkZGRkZGIj48L2VsbGlwc2U+CiAgICAgICAgPC9zdmc+CiAgICAgIDwvZGl2Pg==</data>
+      </textobject>
+      <textobject id="22" name="circle21_copy" type="shape">
+        <data>PGRpdiBkYXRhLXYtMGUyZjU5MzQ9IiIgaWQ9ImN1c3RvbVNoYXBlMjIiIGNsYXNzPSJjdXN0b21TaGFwZSBjb250ZXh0LW1lbnUgcmVzaXphYmxlLWNvbnRlbnQiIG5hbWU9ImNpcmNsZTIxX2NvcHkiIHN0eWxlPSJkaXNwbGF5OiBpbmxpbmU7IHotaW5kZXg6IDk5OTsgd2lkdGg6IDE5MnB4OyBoZWlnaHQ6IDE1M3B4OyBwb3NpdGlvbjogYWJzb2x1dGU7IGxlZnQ6IDI2N3B4OyB0b3A6IDQ3MnB4OyB2aXNpYmlsaXR5OiB2aXNpYmxlOyIgZGF0YS1qdGstbWFuYWdlZD0iY3VzdG9tU2hhcGUyMiI+CiAgICAgICAgPHN2ZyB3aWR0aD0iMTkycHgiIGhlaWdodD0iMTUzcHgiPgogICAgICAgICAgPGVsbGlwc2UgY3g9Ijk2cHgiIGN5PSI3Ni41cHgiIHJ4PSI5NS41cHgiIHJ5PSI3NnB4IiBzdHJva2U9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMC41IiBmaWxsPSIjRkZGRkZGIj48L2VsbGlwc2U+CiAgICAgICAgPC9zdmc+CiAgICAgIDwvZGl2Pg==</data>
+      </textobject>
+    </textobjects>
+  </objects>
+</lab>

@@ -19,10 +19,6 @@ import ipaddress
 import os
 import subprocess
 from pathlib import Path
-from typing import Dict, Optional
-
-from core.config import settings
-
 
 # Development mode: skip real bridge/iptables/dnsmasq operations
 MOCK_MODE = os.getenv("OMNILAB_MOCK_NETWORK", "0") == "1"
@@ -34,7 +30,7 @@ class NetworkError(Exception):
 
 
 # Active dnsmasq processes: {bridge_name: subprocess}
-_dnsmasq_processes: Dict[str, asyncio.subprocess.Process] = {}
+_dnsmasq_processes: dict[str, asyncio.subprocess.Process] = {}
 
 # Config directory for dnsmasq
 DNSMASQ_CONF_DIR = Path("/tmp/omnilab-dnsmasq")
@@ -44,14 +40,14 @@ DNSMASQ_CONF_DIR.mkdir(parents=True, exist_ok=True)
 def _run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
     """
     Run a shell command synchronously (for network setup commands that need immediate completion).
-    
+
     Args:
         cmd: Command and arguments as list
         check: Raise exception on non-zero exit
-    
+
     Returns:
         CompletedProcess result
-    
+
     Raises:
         NetworkError: If command fails and check=True
     """
@@ -69,10 +65,10 @@ def _run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProc
                 f"stderr: {result.stderr}"
             )
         return result
-    except subprocess.TimeoutExpired as e:
-        raise NetworkError(f"Command timed out: {' '.join(cmd)}")
+    except subprocess.TimeoutExpired:
+        raise NetworkError(f"Command timed out: {' '.join(cmd)}") from None
     except Exception as e:
-        raise NetworkError(f"Command error: {e}")
+        raise NetworkError(f"Command error: {e}") from e
 
 
 def bridge_exists(bridge_name: str) -> bool:
@@ -86,12 +82,12 @@ def bridge_exists(bridge_name: str) -> bool:
 def create_bridge(bridge_name: str, subnet: str, gateway: str) -> None:
     """
     Create a Linux bridge and configure it with an IP address.
-    
+
     Args:
         bridge_name: Bridge interface name (e.g., "br-nat0")
         subnet: Network subnet in CIDR (e.g., "192.168.100.0/24")
         gateway: Gateway IP address (e.g., "192.168.100.1")
-    
+
     Raises:
         NetworkError: If bridge creation fails
     """
@@ -103,12 +99,12 @@ def create_bridge(bridge_name: str, subnet: str, gateway: str) -> None:
             if gw_ip not in network:
                 raise NetworkError(f"Gateway {gateway} not in subnet {subnet}")
         except ValueError as e:
-            raise NetworkError(f"Invalid subnet or gateway: {e}")
+            raise NetworkError(f"Invalid subnet or gateway: {e}") from e
         return  # Skip actual bridge creation
-    
+
     if bridge_exists(bridge_name):
         raise NetworkError(f"Bridge {bridge_name} already exists")
-    
+
     # Validate subnet and gateway
     try:
         network = ipaddress.ip_network(subnet, strict=False)
@@ -116,14 +112,14 @@ def create_bridge(bridge_name: str, subnet: str, gateway: str) -> None:
         if gw_ip not in network:
             raise NetworkError(f"Gateway {gateway} not in subnet {subnet}")
     except ValueError as e:
-        raise NetworkError(f"Invalid subnet or gateway: {e}")
-    
+        raise NetworkError(f"Invalid subnet or gateway: {e}") from e
+
     # Create bridge
     _run_command(["ip", "link", "add", bridge_name, "type", "bridge"])
-    
+
     # Assign IP address to bridge
     _run_command(["ip", "addr", "add", f"{gateway}/{network.prefixlen}", "dev", bridge_name])
-    
+
     # Bring bridge up
     _run_command(["ip", "link", "set", bridge_name, "up"])
 
@@ -131,23 +127,23 @@ def create_bridge(bridge_name: str, subnet: str, gateway: str) -> None:
 def delete_bridge(bridge_name: str) -> None:
     """
     Delete a Linux bridge.
-    
+
     Args:
         bridge_name: Bridge interface name
-    
+
     Raises:
         NetworkError: If bridge deletion fails
     """
     if MOCK_MODE:
         return  # Skip in mock mode
-    
+
     if not bridge_exists(bridge_name):
         # Already gone - not an error
         return
-    
+
     # Bring bridge down
     _run_command(["ip", "link", "set", bridge_name, "down"], check=False)
-    
+
     # Delete bridge
     _run_command(["ip", "link", "delete", bridge_name], check=False)
 
@@ -162,20 +158,20 @@ def enable_ip_forwarding() -> None:
 def configure_nat(bridge_name: str, subnet: str) -> None:
     """
     Configure iptables NAT (MASQUERADE) for a bridge.
-    
+
     Args:
         bridge_name: Bridge interface name
         subnet: Network subnet in CIDR
-    
+
     Raises:
         NetworkError: If NAT configuration fails
     """
     if MOCK_MODE:
         return
-    
+
     # Enable IP forwarding
     enable_ip_forwarding()
-    
+
     # Add MASQUERADE rule for SNAT (source NAT)
     # This allows packets from the lab subnet to reach the internet with the host's IP
     _run_command([
@@ -183,7 +179,7 @@ def configure_nat(bridge_name: str, subnet: str) -> None:
         "-s", subnet, "!", "-d", subnet,
         "-j", "MASQUERADE"
     ])
-    
+
     # Allow forwarding from/to the bridge
     _run_command([
         "iptables", "-A", "FORWARD",
@@ -198,21 +194,21 @@ def configure_nat(bridge_name: str, subnet: str) -> None:
 def remove_nat(bridge_name: str, subnet: str) -> None:
     """
     Remove iptables NAT rules for a bridge.
-    
+
     Args:
         bridge_name: Bridge interface name
         subnet: Network subnet in CIDR
     """
     if MOCK_MODE:
         return
-    
+
     # Remove MASQUERADE rule
     _run_command([
         "iptables", "-t", "nat", "-D", "POSTROUTING",
         "-s", subnet, "!", "-d", subnet,
         "-j", "MASQUERADE"
     ], check=False)
-    
+
     # Remove FORWARD rules
     _run_command([
         "iptables", "-D", "FORWARD",
@@ -234,7 +230,7 @@ async def start_dnsmasq(
 ) -> None:
     """
     Start dnsmasq for DHCP and DNS on a bridge.
-    
+
     Args:
         bridge_name: Bridge interface name
         subnet: Network subnet in CIDR
@@ -242,7 +238,7 @@ async def start_dnsmasq(
         dhcp_start: DHCP range start IP
         dhcp_end: DHCP range end IP
         dns_servers: List of upstream DNS servers (default: 8.8.8.8, 1.1.1.1)
-    
+
     Raises:
         NetworkError: If dnsmasq fails to start
     """
@@ -257,15 +253,15 @@ async def start_dnsmasq(
                 if ip not in network:
                     raise NetworkError(f"IP {ip_str} not in subnet {subnet}")
         except ValueError as e:
-            raise NetworkError(f"Invalid IP address: {e}")
+            raise NetworkError(f"Invalid IP address: {e}") from e
         return
-    
+
     if bridge_name in _dnsmasq_processes:
         raise NetworkError(f"dnsmasq already running for {bridge_name}")
-    
+
     if dns_servers is None:
         dns_servers = ["8.8.8.8", "1.1.1.1"]
-    
+
     # Validate IPs are in subnet
     try:
         network = ipaddress.ip_network(subnet, strict=False)
@@ -274,8 +270,8 @@ async def start_dnsmasq(
             if ip not in network:
                 raise NetworkError(f"IP {ip_str} not in subnet {subnet}")
     except ValueError as e:
-        raise NetworkError(f"Invalid IP address: {e}")
-    
+        raise NetworkError(f"Invalid IP address: {e}") from e
+
     # Create dnsmasq config file
     conf_file = DNSMASQ_CONF_DIR / f"{bridge_name}.conf"
     conf_content = f"""# dnsmasq config for {bridge_name}
@@ -290,7 +286,7 @@ log-queries
 log-dhcp
 """
     conf_file.write_text(conf_content)
-    
+
     # Start dnsmasq
     try:
         process = await asyncio.create_subprocess_exec(
@@ -301,34 +297,34 @@ log-dhcp
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        
+
         # Wait briefly to check if dnsmasq started successfully
         await asyncio.sleep(0.5)
         if process.returncode is not None:
             stderr_output = await process.stderr.read()
             raise NetworkError(f"dnsmasq failed to start: {stderr_output.decode('utf-8', errors='ignore')}")
-        
+
         _dnsmasq_processes[bridge_name] = process
-        
+
     except Exception as e:
-        raise NetworkError(f"Failed to start dnsmasq: {e}")
+        raise NetworkError(f"Failed to start dnsmasq: {e}") from e
 
 
 async def stop_dnsmasq(bridge_name: str) -> None:
     """
     Stop dnsmasq for a bridge.
-    
+
     Args:
         bridge_name: Bridge interface name
     """
     if MOCK_MODE:
         return
-    
+
     if bridge_name not in _dnsmasq_processes:
         return  # Not running
-    
+
     process = _dnsmasq_processes[bridge_name]
-    
+
     try:
         if process.returncode is None:
             process.terminate()
@@ -338,9 +334,9 @@ async def stop_dnsmasq(bridge_name: str) -> None:
         await process.wait()
     except ProcessLookupError:
         pass  # Already gone
-    
+
     del _dnsmasq_processes[bridge_name]
-    
+
     # Clean up config file
     conf_file = DNSMASQ_CONF_DIR / f"{bridge_name}.conf"
     if conf_file.exists():
@@ -354,11 +350,11 @@ async def create_nat_network(
     gateway: str,
     dhcp_start: str,
     dhcp_end: str,
-    dns_servers: Optional[list[str]] = None,
+    dns_servers: list[str] | None = None,
 ) -> dict:
     """
     Create a complete NAT network: bridge + NAT + DHCP/DNS.
-    
+
     Args:
         network_id: Network UUID
         bridge_name: Bridge interface name (e.g., "br-nat0")
@@ -367,23 +363,23 @@ async def create_nat_network(
         dhcp_start: DHCP range start IP
         dhcp_end: DHCP range end IP
         dns_servers: List of upstream DNS servers
-    
+
     Returns:
         dict with network status
-    
+
     Raises:
         NetworkError: If any step fails
     """
     try:
         # 1. Create bridge
         create_bridge(bridge_name, subnet, gateway)
-        
+
         # 2. Configure NAT
         configure_nat(bridge_name, subnet)
-        
+
         # 3. Start DHCP/DNS
         await start_dnsmasq(bridge_name, subnet, gateway, dhcp_start, dhcp_end, dns_servers)
-        
+
         return {
             "network_id": network_id,
             "bridge_name": bridge_name,
@@ -393,19 +389,19 @@ async def create_nat_network(
             "dns_servers": dns_servers or ["8.8.8.8", "1.1.1.1"],
             "status": "active",
         }
-        
+
     except Exception as e:
         # Rollback on failure
         await stop_dnsmasq(bridge_name)
         remove_nat(bridge_name, subnet)
         delete_bridge(bridge_name)
-        raise NetworkError(f"Failed to create NAT network: {e}")
+        raise NetworkError(f"Failed to create NAT network: {e}") from e
 
 
 async def destroy_nat_network(bridge_name: str, subnet: str) -> None:
     """
     Destroy a NAT network: stop DHCP, remove NAT, delete bridge.
-    
+
     Args:
         bridge_name: Bridge interface name
         subnet: Network subnet in CIDR
@@ -418,10 +414,10 @@ async def destroy_nat_network(bridge_name: str, subnet: str) -> None:
 def check_nat_health(bridge_name: str) -> dict:
     """
     Check health of a NAT network.
-    
+
     Args:
         bridge_name: Bridge interface name
-    
+
     Returns:
         dict with health status
     """
@@ -432,18 +428,18 @@ def check_nat_health(bridge_name: str) -> dict:
             "ip_forwarding_enabled": True,
             "status": "healthy (mock mode)",
         }
-    
+
     health = {
         "bridge_exists": bridge_exists(bridge_name),
         "dnsmasq_running": bridge_name in _dnsmasq_processes,
         "ip_forwarding_enabled": False,
     }
-    
+
     # Check IP forwarding
     result = _run_command(["sysctl", "net.ipv4.ip_forward"], check=False)
     if result.returncode == 0 and "= 1" in result.stdout:
         health["ip_forwarding_enabled"] = True
-    
+
     health["status"] = "healthy" if all(health.values()) else "unhealthy"
-    
+
     return health

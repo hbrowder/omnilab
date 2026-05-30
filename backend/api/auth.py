@@ -17,17 +17,15 @@ Endpoints:
 """
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from core.auth import (
     create_access_token,
     decode_access_token,
     hash_password,
-    has_permission,
     verify_password,
 )
 from core.database import get_db
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, EmailStr
 
 router = APIRouter()
@@ -42,7 +40,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     role: str = "readonly"  # admin, power-user, readonly
-    full_name: Optional[str] = None
+    full_name: str | None = None
 
 
 class LoginRequest(BaseModel):
@@ -57,13 +55,13 @@ class LoginResponse(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = None
-    role: Optional[str] = None
+    email: EmailStr | None = None
+    full_name: str | None = None
+    role: str | None = None
 
 
 class PasswordChange(BaseModel):
-    current_password: Optional[str] = None  # Not required if admin
+    current_password: str | None = None  # Not required if admin
     new_password: str
 
 
@@ -71,24 +69,24 @@ class PasswordChange(BaseModel):
 # Dependency: Get current user from JWT token
 # ============================================================================
 
-async def get_current_user(authorization: Optional[str] = Header(None)):
+async def get_current_user(authorization: str | None = Header(None)):
     """
     Extract and validate JWT token from Authorization header.
-    
+
     Returns user payload or raises 401.
     """
     if not authorization:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization header")
-    
+
     token = authorization.replace("Bearer ", "")
     payload = decode_access_token(token)
-    
+
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    
+
     # Verify user still exists and is active
     async for db in get_db():
         async with db.execute(
@@ -98,10 +96,10 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
             user = await cur.fetchone()
             if not user:
                 raise HTTPException(status_code=401, detail="User not found")
-            
+
             if not user["is_active"]:
                 raise HTTPException(status_code=403, detail="User account is disabled")
-            
+
             return dict(user)
 
 
@@ -120,17 +118,17 @@ async def require_admin(current_user: dict = Depends(get_current_user)):
 async def register_user(data: RegisterRequest, current_user: dict = Depends(require_admin)):
     """
     Register a new user (admin-only).
-    
+
     First user (when no users exist) can self-register as admin.
     """
     # Validate role
     if data.role not in ["admin", "power-user", "readonly"]:
         raise HTTPException(status_code=400, detail="Invalid role")
-    
+
     user_id = str(uuid.uuid4())
     password_hash = hash_password(data.password)
     now = datetime.utcnow().isoformat()
-    
+
     async for db in get_db():
         try:
             await db.execute(
@@ -147,9 +145,9 @@ async def register_user(data: RegisterRequest, current_user: dict = Depends(requ
         except Exception as e:
             await db.rollback()
             if "UNIQUE constraint failed" in str(e):
-                raise HTTPException(status_code=400, detail="Username or email already exists")
-            raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
-    
+                raise HTTPException(status_code=400, detail="Username or email already exists") from e
+            raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}") from e
+
     return {
         "id": user_id,
         "username": data.username,
@@ -169,26 +167,26 @@ async def login(data: LoginRequest):
             "SELECT * FROM users WHERE username = ?", (data.username,)
         ) as cur:
             user = await cur.fetchone()
-            
+
             if not user:
                 raise HTTPException(status_code=401, detail="Invalid credentials")
-            
+
             if not user["is_active"]:
                 raise HTTPException(status_code=403, detail="Account is disabled")
-            
+
             if not verify_password(data.password, user["password_hash"]):
                 raise HTTPException(status_code=401, detail="Invalid credentials")
-            
+
             # Update last_login
             await db.execute(
                 "UPDATE users SET last_login = ? WHERE id = ?",
                 (datetime.utcnow().isoformat(), user["id"])
             )
             await db.commit()
-    
+
     # Generate JWT
     token = create_access_token(user["id"], user["username"], user["role"])
-    
+
     return LoginResponse(
         access_token=token,
         user={
@@ -253,12 +251,12 @@ async def list_users(current_user: dict = Depends(require_admin)):
 async def get_user(user_id: str, current_user: dict = Depends(get_current_user)):
     """
     Get user details.
-    
+
     Users can view their own profile, admins can view anyone.
     """
     if current_user["role"] != "admin" and current_user["id"] != user_id:
         raise HTTPException(status_code=403, detail="Permission denied")
-    
+
     async for db in get_db():
         async with db.execute(
             "SELECT id, username, email, role, full_name, is_active, last_login, created_at FROM users WHERE id = ?",
@@ -278,45 +276,45 @@ async def update_user(
 ):
     """
     Update user profile.
-    
+
     Users can update their own email/full_name.
     Admins can update anyone's role/email/full_name.
     """
     # Permission check
     is_admin = current_user["role"] == "admin"
     is_self = current_user["id"] == user_id
-    
+
     if not is_admin and not is_self:
         raise HTTPException(status_code=403, detail="Permission denied")
-    
+
     # Non-admins cannot change role
     if data.role and not is_admin:
         raise HTTPException(status_code=403, detail="Cannot change your own role")
-    
+
     updates = []
     params = []
-    
+
     if data.email:
         updates.append("email = ?")
         params.append(data.email)
-    
+
     if data.full_name is not None:
         updates.append("full_name = ?")
         params.append(data.full_name)
-    
+
     if data.role and is_admin:
         if data.role not in ["admin", "power-user", "readonly"]:
             raise HTTPException(status_code=400, detail="Invalid role")
         updates.append("role = ?")
         params.append(data.role)
-    
+
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
-    
+
     updates.append("updated_at = ?")
     params.append(datetime.utcnow().isoformat())
     params.append(user_id)
-    
+
     async for db in get_db():
         try:
             await db.execute(
@@ -327,9 +325,9 @@ async def update_user(
         except Exception as e:
             await db.rollback()
             if "UNIQUE constraint failed" in str(e):
-                raise HTTPException(status_code=400, detail="Email already in use")
-            raise HTTPException(status_code=500, detail=f"Update failed: {str(e)}")
-    
+                raise HTTPException(status_code=400, detail="Email already in use") from e
+            raise HTTPException(status_code=500, detail=f"Update failed: {str(e)}") from e
+
     return {"success": True, "message": "User updated"}
 
 
@@ -341,16 +339,16 @@ async def change_password(
 ):
     """
     Change user password.
-    
+
     Users must provide current_password to change their own.
     Admins can reset anyone's password without current_password.
     """
     is_admin = current_user["role"] == "admin"
     is_self = current_user["id"] == user_id
-    
+
     if not is_admin and not is_self:
         raise HTTPException(status_code=403, detail="Permission denied")
-    
+
     async for db in get_db():
         # If changing own password, verify current password
         if is_self and not is_admin:
@@ -360,13 +358,13 @@ async def change_password(
                 user = await cur.fetchone()
                 if not user:
                     raise HTTPException(status_code=404, detail="User not found")
-                
+
                 if not data.current_password:
                     raise HTTPException(status_code=400, detail="current_password required")
-                
+
                 if not verify_password(data.current_password, user["password_hash"]):
                     raise HTTPException(status_code=401, detail="Current password is incorrect")
-        
+
         # Update password
         new_hash = hash_password(data.new_password)
         try:
@@ -377,8 +375,8 @@ async def change_password(
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Password change failed: {str(e)}")
-    
+            raise HTTPException(status_code=500, detail=f"Password change failed: {str(e)}") from e
+
     return {"success": True, "message": "Password updated"}
 
 
@@ -390,14 +388,14 @@ async def toggle_user_activation(
 ):
     """
     Activate or deactivate a user account (admin-only).
-    
+
     Prevents user from logging in without deleting their data.
     """
     async for db in get_db():
         async with db.execute("SELECT id FROM users WHERE id = ?", (user_id,)) as cur:
             if not await cur.fetchone():
                 raise HTTPException(status_code=404, detail="User not found")
-        
+
         try:
             await db.execute(
                 "UPDATE users SET is_active = ?, updated_at = ? WHERE id = ?",
@@ -406,8 +404,8 @@ async def toggle_user_activation(
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Activation toggle failed: {str(e)}")
-    
+            raise HTTPException(status_code=500, detail=f"Activation toggle failed: {str(e)}") from e
+
     status = "activated" if is_active else "deactivated"
     return {"success": True, "message": f"User {status}"}
 
@@ -416,20 +414,20 @@ async def toggle_user_activation(
 async def delete_user(user_id: str, current_user: dict = Depends(require_admin)):
     """
     Delete a user (admin-only).
-    
+
     Cannot delete yourself (prevents lockout).
     """
     if current_user["id"] == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
-    
+
     async for db in get_db():
         async with db.execute("SELECT id FROM users WHERE id = ?", (user_id,)) as cur:
             if not await cur.fetchone():
                 raise HTTPException(status_code=404, detail="User not found")
-        
+
         try:
             await db.execute("DELETE FROM users WHERE id = ?", (user_id,))
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}") from e
