@@ -40,6 +40,63 @@ def _reset_provisioner_for_tests(p: DockerProvisioner | None = None) -> None:
     _provisioner = p
 
 
+# ---------------------------------------------------------------------------
+# Shared docker start/stop sequences — the SINGLE SOURCE OF TRUTH for the
+# order of provisioner calls a docker node goes through. Both the async HTTP
+# endpoints below and the synchronous agent tools (services/agent_tools.py,
+# CRE-43) funnel through these coroutines so the two layers can never drift.
+#
+# These are pure async helpers over a provisioner: they perform NO database
+# writes (each caller owns its own DB row update — aiosqlite for the endpoint,
+# sqlite3 via the Repo for the tools). The agent tools drive them from sync
+# code via a private event loop (safe: the sync /tools endpoint and the CRE-44
+# loop both run in a threadpool worker with no running loop).
+# ---------------------------------------------------------------------------
+
+
+async def docker_start_sequence(
+    provisioner: DockerProvisioner,
+    *,
+    node_id: str,
+    lab_id: str,
+    image: str,
+    name: str,
+    ports: dict | None = None,
+    docker_options: dict | None = None,
+    progress_cb=None,
+) -> dict:
+    """ensure_image -> create_lab_network -> start_node. Returns start result."""
+    await provisioner.ensure_image(image, progress_cb=progress_cb)
+    await provisioner.create_lab_network(lab_id)
+    return await provisioner.start_node(
+        node_id=node_id,
+        lab_id=lab_id,
+        image=image,
+        name=name,
+        ports=ports,
+        docker_options=docker_options,
+    )
+
+
+async def docker_stop_sequence(
+    provisioner: DockerProvisioner,
+    *,
+    node_id: str,
+    lab_id: str,
+    others_running: int,
+) -> None:
+    """stop_node, then destroy the lab network iff no other docker node in the
+    lab is still running. ``others_running`` is the count of *other* running
+    docker nodes in the lab (caller computes it from its own DB)."""
+    await provisioner.stop_node(node_id)
+    if others_running == 0:
+        try:
+            await provisioner.destroy_lab_network(lab_id)
+        except DockerProvisionerError:
+            # Best-effort — a transient network-destroy error must not fail stop.
+            pass
+
+
 class NodeCreate(BaseModel):
     lab_id: str
     name: str
@@ -61,7 +118,7 @@ async def add_node(data: NodeCreate):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to create node: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to create node: {str(e)}") from e
     return {"id": node_id, "name": data.name, "type": data.type, "status": "stopped", "console_type": data.console_type or "pty"}
 
 @router.get("/{node_id}")
@@ -81,7 +138,7 @@ async def delete_node(node_id: str):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to delete node: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to delete node: {str(e)}") from e
 
 import subprocess as _subprocess
 
@@ -157,15 +214,15 @@ async def start_node(node_id: str):
 
                     _l.call_soon_threadsafe(_schedule)
 
-                await p.ensure_image(image, progress_cb=_emit)
-                await p.create_lab_network(node["lab_id"])
-                result = await p.start_node(
+                result = await docker_start_sequence(
+                    p,
                     node_id=node_id,
                     lab_id=node["lab_id"],
                     image=image,
                     name=node.get("name") or node_id,
                     ports=ports,
                     docker_options=docker_options,
+                    progress_cb=_emit,
                 )
             except DockerProvisionerError as exc:
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -273,6 +330,8 @@ async def stop_node(node_id: str):
                 await db.commit()
                 raise HTTPException(status_code=503, detail=str(exc)) from exc
 
+            # Stop the container first (no DB write yet so a transient docker
+            # error doesn't leave the row in a weird state).
             try:
                 await p.stop_node(node_id)
             except DockerProvisionerError as exc:
@@ -285,16 +344,16 @@ async def stop_node(node_id: str):
             await db.commit()
 
             # Was this the last running docker node in the lab? If so, tear
-            # down the lab network. We do this AFTER the stop+commit so a
-            # transient docker error doesn't leave the node row in a weird
-            # state. Network destroy is best-effort — log but don't fail.
+            # down the lab network (best-effort). We compute "others running"
+            # AFTER the commit above so this node is already counted as stopped.
             async with db.execute(
                 "SELECT COUNT(*) AS n FROM nodes "
                 "WHERE lab_id = ? AND lower(type) = 'docker' AND status = 'running'",
                 (lab_id,),
             ) as cur:
                 remaining = await cur.fetchone()
-            if remaining and remaining["n"] == 0:
+            others_running = remaining["n"] if remaining else 0
+            if others_running == 0:
                 try:
                     await p.destroy_lab_network(lab_id)
                 except DockerProvisionerError:

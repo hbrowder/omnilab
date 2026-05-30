@@ -17,12 +17,10 @@ Endpoints:
 - POST /api/template-library/upload - Upload QEMU image (qcow2/vmdk/ova)
 """
 import json
-import os
 import uuid
 from datetime import datetime
 from pathlib import Path
 
-from core.config import settings
 from core.database import get_db
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -75,20 +73,20 @@ async def list_templates(
     async for db in get_db():
         query = "SELECT * FROM templates WHERE 1=1"
         params = []
-        
+
         if visible_only:
             query += " AND visible = 1"
-        
+
         if category:
             query += " AND category = ?"
             params.append(category)
-        
+
         if type:
             query += " AND type = ?"
             params.append(type)
-        
+
         query += " ORDER BY is_builtin DESC, vendor ASC, name ASC"
-        
+
         async with db.execute(query, params) as cur:
             rows = await cur.fetchall()
             return [
@@ -105,7 +103,7 @@ async def create_template(data: TemplateCreate):
     """Create a new template (user-uploaded images only, is_builtin=0)."""
     template_id = str(uuid.uuid4())
     now = datetime.utcnow().isoformat()
-    
+
     async for db in get_db():
         try:
             await db.execute(
@@ -124,8 +122,8 @@ async def create_template(data: TemplateCreate):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-    
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
+
     return {
         "id": template_id,
         "name": data.name,
@@ -156,7 +154,7 @@ async def get_template(template_id: str):
 async def update_template(template_id: str, data: TemplateUpdate):
     """
     Update template metadata.
-    
+
     Built-in templates (is_builtin=1) can only update visibility and icon.
     User templates can update everything.
     """
@@ -169,66 +167,66 @@ async def update_template(template_id: str, data: TemplateUpdate):
             if not row:
                 raise HTTPException(status_code=404, detail="Template not found")
             is_builtin = row["is_builtin"]
-        
+
         # Build UPDATE query dynamically based on what's provided
         updates = []
         params = []
-        
+
         if data.name is not None and not is_builtin:
             updates.append("name = ?")
             params.append(data.name)
-        
+
         if data.vendor is not None and not is_builtin:
             updates.append("vendor = ?")
             params.append(data.vendor)
-        
+
         if data.category is not None and not is_builtin:
             updates.append("category = ?")
             params.append(data.category)
-        
+
         if data.description is not None and not is_builtin:
             updates.append("description = ?")
             params.append(data.description)
-        
+
         if data.image is not None and not is_builtin:
             updates.append("image = ?")
             params.append(data.image)
-        
+
         if data.cpu is not None and not is_builtin:
             updates.append("cpu = ?")
             params.append(data.cpu)
-        
+
         if data.ram is not None and not is_builtin:
             updates.append("ram = ?")
             params.append(data.ram)
-        
+
         if data.disk is not None and not is_builtin:
             updates.append("disk = ?")
             params.append(data.disk)
-        
+
         if data.console_type is not None and not is_builtin:
             updates.append("console_type = ?")
             params.append(data.console_type)
-        
+
         if data.icon is not None:
             updates.append("icon = ?")
             params.append(data.icon)
-        
+
         if data.visible is not None:
             updates.append("visible = ?")
             params.append(1 if data.visible else 0)
-        
+
         if data.config is not None and not is_builtin:
             updates.append("config = ?")
             params.append(json.dumps(data.config))
-        
+
         if not updates:
             raise HTTPException(status_code=400, detail="No fields to update")
-        
+
         updates.append("updated_at = ?")
         params.append(datetime.utcnow().isoformat())
         params.append(template_id)
-        
+
         try:
             await db.execute(
                 f"UPDATE templates SET {', '.join(updates)} WHERE id = ?",
@@ -237,8 +235,8 @@ async def update_template(template_id: str, data: TemplateUpdate):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-    
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
+
     return {"success": True, "message": "Template updated"}
 
 
@@ -251,7 +249,7 @@ async def toggle_visibility(template_id: str, visible: bool):
         ) as cur:
             if not await cur.fetchone():
                 raise HTTPException(status_code=404, detail="Template not found")
-        
+
         try:
             await db.execute(
                 "UPDATE templates SET visible = ?, updated_at = ? WHERE id = ?",
@@ -260,8 +258,8 @@ async def toggle_visibility(template_id: str, visible: bool):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-    
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
+
     return {"success": True, "visible": visible}
 
 
@@ -269,7 +267,7 @@ async def toggle_visibility(template_id: str, visible: bool):
 async def delete_template(template_id: str):
     """
     Delete a user template.
-    
+
     Built-in templates (is_builtin=1) cannot be deleted.
     """
     async for db in get_db():
@@ -279,19 +277,19 @@ async def delete_template(template_id: str):
             row = await cur.fetchone()
             if not row:
                 raise HTTPException(status_code=404, detail="Template not found")
-            
+
             if row["is_builtin"]:
                 raise HTTPException(
                     status_code=403,
                     detail="Built-in templates cannot be deleted (use visibility toggle instead)"
                 )
-            
+
             image_path = row["image"]
-        
+
         try:
             await db.execute("DELETE FROM templates WHERE id = ?", (template_id,))
             await db.commit()
-            
+
             # If image is a local file (not a Docker image ref), delete it
             if image_path and not image_path.startswith(("docker://", "http://", "https://")):
                 image_file = Path(image_path)
@@ -299,7 +297,7 @@ async def delete_template(template_id: str):
                     image_file.unlink()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to delete template: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to delete template: {str(e)}") from e
 
 
 @router.post("/upload")
@@ -311,26 +309,26 @@ async def upload_image(
 ):
     """
     Upload a QEMU/KVM disk image (qcow2, vmdk, ova).
-    
+
     Returns the file path to use in template creation.
     Supports chunked upload for large files (vendor images can be 1-10GB).
     """
     # Validate file extension
     allowed_extensions = {".qcow2", ".vmdk", ".ova", ".raw", ".img"}
     file_ext = Path(file.filename).suffix.lower()
-    
+
     if file_ext not in allowed_extensions:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
         )
-    
+
     # Generate unique filename
     upload_id = str(uuid.uuid4())[:8]
     safe_name = "".join(c for c in (name or file.filename) if c.isalnum() or c in "._- ")
     image_filename = f"{upload_id}_{safe_name}{file_ext}"
     image_path = IMAGE_DIR / image_filename
-    
+
     # Write file in chunks (handle large files)
     try:
         with open(image_path, "wb") as f:
@@ -340,8 +338,8 @@ async def upload_image(
         # Cleanup partial file on error
         if image_path.exists():
             image_path.unlink()
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
-    
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}") from e
+
     return {
         "success": True,
         "image_path": str(image_path),

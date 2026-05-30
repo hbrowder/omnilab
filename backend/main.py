@@ -6,6 +6,7 @@ from pathlib import Path
 
 import httpx
 import uvicorn
+from api.agent import router as agent_router
 from api.auth import router as auth_router
 from api.backup import router as backup_router
 from api.billing import router as billing_router
@@ -15,19 +16,21 @@ from api.labs import router as labs_router
 from api.license import router as license_router
 from api.networks import router as networks_router
 from api.nodes import router as nodes_router
+from api.settings import agent_test_router
+from api.settings import router as settings_router
 from api.system import router as system_router
 from api.templates import router as templates_router
 from api.templates_crud import router as templates_crud_router
+from api.traffic_websocket import router as traffic_websocket_router
 from api.updates import router as updates_router
 from api.web_proxy import router as web_proxy_router
-from api.traffic_websocket import router as traffic_websocket_router
-from routes.traffic_filters import router as traffic_filters_router
-from routes.textobjects import router as textobjects_router
 from core.database import init_db
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from routes.textobjects import router as textobjects_router
+from routes.traffic_filters import router as traffic_filters_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("omnilab")
@@ -82,13 +85,13 @@ async def timing_middleware(request: Request, call_next):
     start = time.perf_counter()
     response = await call_next(request)
     elapsed_ms = (time.perf_counter() - start) * 1000
-    
+
     # Only track API calls (ignore static files, websockets, health endpoint itself to avoid recursion)
     if request.url.path.startswith("/api") and "/health" not in request.url.path:
         _request_times.append(elapsed_ms)
         if len(_request_times) > _max_samples:
             _request_times.pop(0)
-    
+
     return response
 
 app.include_router(license_router, prefix="/api/license", tags=["license"])
@@ -107,6 +110,9 @@ app.include_router(console_router,   prefix="/api/console")
 app.include_router(traffic_websocket_router, prefix="/api")  # CRE-68 Phase 3: WebSocket for traffic events
 app.include_router(traffic_filters_router)  # CRE-68: Traffic Filters (uses /api/labs prefix internally)
 app.include_router(textobjects_router)      # CRE-64: Drawing Tools (uses /api/labs prefix internally)
+app.include_router(agent_router)            # CRE-42: AI Lab Builder tool surface (router sets its own /api/agent prefix)
+app.include_router(settings_router,  prefix="/api/settings", tags=["settings"])  # CRE-45: BYO-key AI provider config
+app.include_router(agent_test_router)       # CRE-45: /api/agent/test provider ping (router sets its own /api/agent prefix)
 # CRE-39: docker-node web-UI reverse proxy. Routes are
 #   /labs/{lab_id}/nodes/{node_id}/web/*       (HTTP)
 #   /labs/{lab_id}/nodes/{node_id}/web-ws/*    (WebSocket)
@@ -164,7 +170,7 @@ async def spa_fallback(full_path: str):
     if full_path.startswith("api/"):
         from fastapi.responses import JSONResponse
         return JSONResponse({"detail": "Not Found"}, status_code=404)
-    
+
     file_path = DIST / full_path
     if file_path.exists() and file_path.is_file():
         return FileResponse(str(file_path))
@@ -172,7 +178,7 @@ async def spa_fallback(full_path: str):
 
 if __name__ == "__main__":
     import sys
-    
+
     # Security banner for v1.0 (localhost-only deployment model)
     print("\n" + "="*70)
     print("  OmniLab v1.0 - Network Emulation Platform")
@@ -182,7 +188,7 @@ if __name__ == "__main__":
     print("     → Unsafe for: internet-exposed or LAN-wide deployments")
     print("     → Multi-user auth coming in v1.1")
     print("="*70 + "\n")
-    
+
     # Warn if binding to 0.0.0.0 (accessible beyond localhost)
     host = sys.argv[sys.argv.index("--host") + 1] if "--host" in sys.argv else "0.0.0.0"
     if host in ("0.0.0.0", "0"):
@@ -195,5 +201,5 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             print("\n✋ Startup cancelled by user\n")
             sys.exit(0)
-    
+
     uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=False)

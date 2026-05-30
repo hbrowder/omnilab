@@ -40,41 +40,40 @@ async def health():
 async def check_image_permissions():
     """
     Check image directory permissions (CRE-53 enhancement).
-    
+
     Verifies all images are readable/writable by the service user.
     EVE-NG requires manual 'fixpermissions' after uploads - OmniLab auto-fixes!
     """
     import os
     from pathlib import Path
-    
+
     image_dir = Path.home() / ".omnilab" / "images"
     image_dir.mkdir(parents=True, exist_ok=True)
-    
+
     issues = []
     fixed = []
     current_uid = os.getuid()
-    current_gid = os.getgid()
-    
+
     # Check all QEMU images
     for image in image_dir.glob("**/*.qcow2"):
         stat = image.stat()
         has_issue = False
-        
+
         # Check ownership
         if stat.st_uid != current_uid:
             issues.append(f"{image.name}: wrong owner (uid {stat.st_uid}, expected {current_uid})")
             has_issue = True
-        
+
         # Check readability
         if not os.access(image, os.R_OK):
             issues.append(f"{image.name}: not readable")
             has_issue = True
-        
+
         # Check writability (needed for backing files)
         if not os.access(image, os.W_OK):
             issues.append(f"{image.name}: not writable")
             has_issue = True
-        
+
         # Auto-fix if possible (only mode, can't chown without root)
         if has_issue and stat.st_uid == current_uid:
             try:
@@ -82,9 +81,9 @@ async def check_image_permissions():
                 fixed.append(image.name)
             except Exception as e:
                 issues.append(f"{image.name}: auto-fix failed - {e}")
-    
+
     total_images = len(list(image_dir.glob("**/*.qcow2")))
-    
+
     return {
         "status": "ok" if not issues else "warning",
         "total_images": total_images,
@@ -98,24 +97,24 @@ async def check_image_permissions():
 async def fix_image_permissions():
     """
     Force fix all image permissions (admin only in production).
-    
+
     Sets all images to 644 (rw-r--r--) with service user ownership.
     Unlike EVE-NG, this is rarely needed - upload API sets correct perms automatically.
     """
     import os
     from pathlib import Path
-    
+
     image_dir = Path.home() / ".omnilab" / "images"
     fixed = []
     errors = []
-    
+
     for image in image_dir.glob("**/*.qcow2"):
         try:
             os.chmod(image, 0o644)
             fixed.append(image.name)
         except Exception as e:
             errors.append(f"{image.name}: {e}")
-    
+
     return {
         "success": True,
         "fixed": len(fixed),
@@ -199,7 +198,7 @@ async def first_run_complete(payload: FirstRunComplete):
     async for db in get_db():
         try:
             hashed = bcrypt.hashpw(
-                payload.admin_password.encode(), bcrypt.gensalt()
+                payload.password.encode(), bcrypt.gensalt()
             ).decode()
             now = datetime.now(timezone.utc).isoformat()
             await db.execute(
@@ -214,7 +213,7 @@ async def first_run_complete(payload: FirstRunComplete):
             await db.commit()
         except Exception as e:
             await db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to complete setup wizard: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to complete setup wizard: {str(e)}") from e
 
     license_result: dict | None = None
     if payload.license_key:
