@@ -199,7 +199,7 @@ async def first_run_complete(payload: FirstRunComplete):
     async for db in get_db():
         try:
             hashed = bcrypt.hashpw(
-                payload.admin_password.encode(), bcrypt.gensalt()
+                payload.password.encode(), bcrypt.gensalt()
             ).decode()
             now = datetime.now(timezone.utc).isoformat()
             await db.execute(
